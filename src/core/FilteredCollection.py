@@ -25,31 +25,34 @@ class FilteredCollection(object):
     def Add(self, item):
         print(f"item: {item}")
         #print(f"adding")
-        
+
+        #print(f"relation: {self.__relationToFind} SubsetRelation: {SubsetRelation.Unrelated}")
         if (self.__relationToFind != SubsetRelation.Unrelated):
             # for i in range(len(self.__current)):
             # if hasattr(item, 'Items'): print(f"{item.__repr__()}... ", end = ' ')
             i = 0
-            print(f"self.__current size: {len(self.__current)}")
+            #print(f"self.__current size: {len(self.__current)} current: {self.__current}")
             while i < len(self.__current):
 
                 relation = self.__comparer(item, self.__current[i])
+                #print(f"relation: {relation}")
                 if (relation == SubsetRelation.Equal or relation == self.__inverseRelation):
-                    print(f"subsetRelation.Equal")
+                    #print(f"subsetRelation.Equal")
                     # if hasattr(item, 'Items') and relation == SubsetRelation.Equal: print(f"Not added (equal to {self.__current[i].__repr__()})... ")
                     # if hasattr(item, 'Items') and relation == self.__inverseRelation and relation==SubsetRelation.Subset: print(f"Not added (it is not a superset of{self.__current[i].__repr__()})... ")
                     # if hasattr(item, 'Items') and relation == self.__inverseRelation and relation==SubsetRelation.Superset: print(f"Not added (it is not a subset of{self.__current[i].__repr__()})... ")
                     return
                 elif (relation == self.__relationToFind):
-                    print(f"relation == self.__relationToFind")
+                    #print(f"relation == self.__relationToFind")
                     # if hasattr(item, 'Items'): print(f"Removing {self.__current[i].__repr__()}... ")
                     # if hasattr(item, 'Items'): print(f"{item.__repr__()}... ", end = ' ')
                     self.__current.remove(self.__current[i])
                 else:
                     i += 1
         # if hasattr(item, 'Items'): print(f"Added")
+        
         self.__current.append(item)
-        print(f"self.__current {self.__current} size: {len(self.__current)}")
+        #print(f"self.__current {self.__current} size: {len(self.__current)}")
 
     def GetItems(self):
         return self.__current

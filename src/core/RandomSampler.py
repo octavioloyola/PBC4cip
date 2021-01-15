@@ -1,10 +1,10 @@
 import random
 
 def SampleWithoutRepetition(poulation, sampleSize):
-    random.seed(1000)
+    random.seed(800)
     #print(f"population: {poulation}")
     #print(f"sampleSize: {sampleSize}")
     result =  random.sample(set(
         map(lambda attribute: attribute, poulation)), sampleSize)
-    print(f"resultt: {result}")
+    #print(f"resultt: {result}")
     return result

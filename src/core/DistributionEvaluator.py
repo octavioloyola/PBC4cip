@@ -33,6 +33,11 @@ def Hellinger(parent, children):
 
 
 def MultiClassHellinger(parent, children):
+    #parent = [45.0, 45.0, 45.0]
+    #children = 2*[3*[0]]
+    #children[0] = [44.0, 20.0, 2.0]
+    #children[1] = [1.0, 25.0, 43.0]
+    print(f"parent: {parent}")
     print(f"multiClass Hellinger")
     # region Preconditions
     if len(children) != 2:
@@ -58,13 +63,14 @@ def MultiClassHellinger(parent, children):
             if currentValue > hellinger:
                 hellinger = currentValue
     except ZeroDivisionError:
+        print(f"zeroDivError")
         return sys.float_info.max
-
+    print(f"hellingerVal {hellinger}")
     return math.sqrt(hellinger)
 
 def QuinlanGain (parent, children):
     #print("I am in quinlan")
-    print(children)
+    #print(children)
     #rint(" ")
     #parent = [45.0, 45.0, 45.0]
     #children = 2*[3*[0]]

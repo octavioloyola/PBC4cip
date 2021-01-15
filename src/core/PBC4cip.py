@@ -2,7 +2,7 @@
 import math
 from io import StringIO, BytesIO
 from core.DecisionTreeBuilder import DecisionTreeBuilder, MultivariateDecisionTreeBuilder
-from core.PatternMiner import PatternMiner
+from core.PatternMiner import PatternMiner, PatternMinerWithoutFiltering
 from core.DistributionEvaluator import Hellinger, MultiClassHellinger, QuinlanGain
 from core.DistributionTester import PureNodeStopCondition, AlwaysTrue
 from core.Item import SubsetRelation
@@ -24,7 +24,11 @@ class PBC4cip:
         self.__classDistribution = None
 
     def Training(self, multivariate, treeCount=None):
-        miner = PatternMiner(self.Dataset, multivariate)
+        filtering = False
+        if filtering:
+            miner = PatternMiner(self.Dataset)
+        else:
+            miner = PatternMinerWithoutFiltering(self.Dataset) 
 
         if not multivariate:
             print("nnot multivariate")

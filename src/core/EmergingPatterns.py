@@ -35,17 +35,32 @@ class EmergingPattern(object):
         self.Counts = matchesCount
         self.Supports = self.CalculateSupports(matchesCount)
 
-    def CalculateSupports(self, data):
-        classInfo = self.Dataset.ClassInformation
-        result = copy(data)
-        for i in range(len(result)):
-            if classInfo.Distribution[i] != 0:
-                result[i] /= classInfo.Distribution[i]
-            else:
-                result[i] = 0
-        return result
+    def CalculateSupports(self, data, classFeatureParam=None):
+        #Never seen when it enters here
+        if classFeatureParam == None:
+            classInfo = self.Dataset.ClassInformation
+            result = copy(data)
+            for i in range(len(result)):
+                if classInfo.Distribution[i] != 0:
+                    result[i] /= classInfo.Distribution[i]
+                else:
+                    result[i] = 0
+            return result
+        else:
+            classFeature = self.Dataset.ClassInformation.Feature
+            featureInformation = self.Dataset.ClassInformation.Distribution
+            print(f"featureInformation: {featureInformation}")
+            result = copy(data)
+            for i in range(len(result)):
+                if featureInformation[i] != 0:
+                    result[i] /= featureInformation[i]
+                else:
+                    result[i] = 0
+            return result
+                
 
     def Clone(self):
+
         result = EmergingPattern(self.Dataset, self.Items)
         result.Counts = copy(self.Counts)
         result.Supports = copy(self.Supports)
@@ -102,13 +117,15 @@ class EmergingPatternCreator(object):
             treeClassifier.DecisionTree.TreeRootNode, context, action)
 
     def DoExtractPatterns(self, node, contexts, action):
-        #print("Do Extract Patterns")
+        print("Do Extract Patterns")
+        #print(f"contexts: {contexts}")
         #print(type(node))
         if node.IsLeaf:
             newPattern = self.Create(contexts)
             newPattern.Counts = node.Data
             newPattern.Supports = newPattern.CalculateSupports(node.Data)
             if action:
+                print("About to invoke in DoExtractPatterns")
                 action(newPattern)
         else:
             for index in range(len(node.Children)):

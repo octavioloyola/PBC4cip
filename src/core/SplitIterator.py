@@ -23,10 +23,10 @@ class SplitIteratorProvider(object):
         #return NominalSplitIterator(self.Dataset, currentFeature)
         #print(f"currFeature {currentFeature}")
         if self.Dataset.IsNominalFeature(currentFeature):
-            #print("isNominal")
+            print("isNominal")
             return NominalSplitIterator(self.Dataset, currentFeature)
         else:
-            #print("isNumeric")
+            print("isNumeric")
             return NumericSplitIterator(self.Dataset, currentFeature)
 
 

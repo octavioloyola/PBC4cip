@@ -131,14 +131,15 @@ def Evaluate(classes, real, predicted):
             "Cannot evaluate classification. Real and Predicted counts are different.")
     numClasses = len(classes)
 
-    print(f"real: {real}")
-    #print(f"predicted: {predicted}")
+    print(f"real: {real}\n")
+    print(f"predicted: {predicted}")
     evaluation = CrispAndPartitionEvaluation()
     evaluation.ConfusionMatrix = ConfusionMatrix(classes)
 
-    confusion = [[0] * len(classes) for i in range(len(classes)) ]
+    confusion = [[0]*2 for i in range(2)]
     classified_as = 0
     error_count = 0
+    """
     for i in range(len(real)):
         for j in range(len(predicted[i])):
             if predicted[i][j] > predicted[i][classified_as]:
@@ -148,7 +149,13 @@ def Evaluate(classes, real, predicted):
 
         if (classified_as != expectedValue):
             error_count = error_count + 1
-        
+    """
+
+    for i in range(len(real)):
+        if real[i] != predicted[i]:
+            error_count = error_count + 1
+        confusion[real[i]][predicted[i]] = confusion[real[i]][predicted[i]] + 1
+
     acc = 100.0 * (len(real) - error_count) / len(real)
     auc = obtainAUCMulticlass(confusion, len(classes))
         

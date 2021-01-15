@@ -31,11 +31,12 @@ def GetFilesFromDirectory(directory):
         raise Exception(f"Directory {directory} is not valid.")
 
 
-def Train(file, outputDirectory, treeCount, multivariate, suffix=None):
+def Train(file, outputDirectory, treeCount, multivariate, filtering, suffix=None):
     print(f"Training is about to begin")
     classifier = PBC4cip(file)
-    patterns = classifier.Training(multivariate, treeCount)
-    WritePatternsCSV(patterns, file, outputDirectory, suffix) #Create the csv file with patterns
+    patterns = classifier.Training(multivariate, filtering, treeCount)
+    print(f"Patterns in Train are: {len(patterns)}")
+    #WritePatternsCSV(patterns, file, outputDirectory, suffix) #Create the csv file with patterns
     WritePatternsBinary(patterns, file, outputDirectory, suffix) #Create the .pypatterns file
 
 
@@ -47,24 +48,49 @@ def Classify(file, outputDirectory, resultsId, delete, suffix=None):
         patterns = ReadPatternsBinary(file, outputDirectory, delete, suffix)
         confusion, acc, auc = classifier.Classification(patterns)
         #WriteClassificationResults(confusion, acc, auc, file, outputDirectory, suffix)
-        WriteResultsCSV(confusion, acc, auc, file, outputDirectory, resultsId)
+        WriteResultsCSV(confusion, acc, auc, len(patterns), file, outputDirectory, resultsId, None)
 
         for i in range(len(confusion[0])):
             for j in range(len(confusion[0])):
                 print(f"{confusion[i][j]} ", end='')
             print("")
-        print(f"acc: {acc}, auc: {auc}, numPatterns: {len(patterns)}")
-
-    
-    
+        print(f"acc: {acc} , auc: {auc} , numPatterns: {len(patterns)}")
     except Exception as e:
         print(e)
+
+def Train_and_test(trainFile, outputDirectory, treeCount, multivariate, filtering, testFile, resultsId, delete):
+    print(f"Train and Test")
+    classifier = PBC4cip(trainFile)
+    patterns = classifier.Training(multivariate, filtering, treeCount)
+    print(f"Now start testing")
+    classifier_test = PBC4cip(testFile)
+    confusion, acc, auc = classifier_test.Classification(patterns)
+    print(f"TrainLen: {trainFile} testLen: {testFile}")
+    WriteResultsCSV(confusion, acc, auc, len(patterns), testFile, outputDirectory, resultsId, filtering)
+
+    for i in range(len(confusion[0])):
+        for j in range(len(confusion[0])):
+            print(f"{confusion[i][j]} ", end='')
+        print("")
+    print(f"acc: {acc} , auc: {auc} , numPatterns: {len(patterns)}")
+
+
+def str2bool(v):
+    if isinstance(v, bool):
+       return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 def Execute(args):
     # Initialize the array of testing and training dataset files
 
     # region File lists initialization
+
     testing_files = []
     training_files = []
 
@@ -93,34 +119,44 @@ def Execute(args):
    # endregion
 
     print("===============================================================================")
-    tra = trange(len(training_files), desc='Training files...',
-                 leave=True, unit="dataset")
-    # tqdm(training_files, desc="Training files...", unit="dataset"):
-    for f in tra:
-        tra.set_description(f"Extracting patterns from {training_files[f]}")
-        tra.refresh()  # to show immediately the update
-        Train(training_files[f], args.output_directory, args.tree_count, args.multivariate,
-              args.training_file_suffix)
+    if len(training_files) == len(testing_files):
+        tra = trange(len(training_files), desc='Training and Testing Files...', leave=True, unit="dataset")
 
-    print("===============================================================================")
-    tst = trange(len(testing_files), desc='Testing files...',
-                 leave=True, unit="dataset")
-    # tqdm(testing_files, desc="Testing patterns...", unit="dataset"):
+        now = datetime.now()  # current date and time
+        resultsId = now.strftime("%Y%m%d%H%M%S")
 
-    now = datetime.now()  # current date and time
-    resultsId = now.strftime("%Y%m%d%H%M%S")
+        for f in tra:
+            tra.set_description(f"Working from {training_files[f]}")
+            Train_and_test(training_files[f], args.output_directory, args.tree_count, args.multivariate,
+                args.filtering,  testing_files[f], resultsId, args.delete_binary )
+    else:
+        tra = trange(len(training_files), desc='Training files...',
+                    leave=True, unit="dataset")
+        # tqdm(training_files, desc="Training files...", unit="dataset"):
+        for f in tra:
+            tra.set_description(f"Extracting patterns from {training_files[f]}")
+            tra.refresh()  # to show immediately the update
+            Train(training_files[f], args.output_directory, args.tree_count, args.multivariate,
+                args.filtering, args.training_file_suffix)
 
-    for f in tst:
-        tst.set_description(f"Classifying instances from {testing_files[f]}")
-        tst.refresh()  # to show immediately the update
-        Classify(testing_files[f], args.output_directory, resultsId,
-                 args.delete_binary, args.test_file_suffix)
-        #tst.set_description(f"Results saved for {testing_files[f]}")
-        tst.refresh()  # to show immediately the update
+        print("===============================================================================")
+        tst = trange(len(testing_files), desc='Testing files...',
+                    leave=True, unit="dataset")
+        # tqdm(testing_files, desc="Testing patterns...", unit="dataset"):
+
+        now = datetime.now()  # current date and time
+        resultsId = now.strftime("%Y%m%d%H%M%S")
+
+        for f in tst:
+            tst.set_description(f"Classifying instances from {testing_files[f]}")
+            tst.refresh()  # to show immediately the update
+            Classify(testing_files[f], args.output_directory, resultsId,
+                    args.delete_binary, args.test_file_suffix)
+            #tst.set_description(f"Results saved for {testing_files[f]}")
+            tst.refresh()  # to show immediately the update
 
 
 if __name__ == '__main__':
-    print("sss")
 
     defaultDataDir = os.path.join(os.path.normpath(
         os.path.join(os.getcwd(), os.pardir)), "data", "python")
@@ -137,7 +173,6 @@ if __name__ == '__main__':
     # defaultTestingFiles.append(os.path.join(os.path.normpath(
     #     defaultDataDir), "winequality-white-3_vs_7tst.dat"))
     # endregion
-    print("ddd")
     parser = argparse.ArgumentParser(
         description="Process some class imbalace datasets using PBC4cip.")
 
@@ -164,7 +199,7 @@ if __name__ == '__main__':
     parser.add_argument("--input-directory",
                         type=str,
                         metavar="'"+defaultDataDir+"'",
-                        default=defaultDataDir,
+                        #default=defaultDataDir,
                         help="the directory with files to be classified")
 
     parser.add_argument("--output-directory",
@@ -175,15 +210,16 @@ if __name__ == '__main__':
                         help="the output directory for the patterns")
 
     parser.add_argument("--multivariate",
-                        type=bool,
-                        metavar="<True/False>",
+                        type=str2bool,
+                        const=True,
                         default=False,
+                        nargs='?',
                         help="states if multivariate variant is to be used")
 
     parser.add_argument("--delete-binary",
-                        type=bool,
-                        metavar="<True/False>",
+                        type=str2bool,
                         default=True,
+                        nargs='?',
                         help="states if binary file is to be deleted after execution")
 
     parser.add_argument("--tree-count",
@@ -191,6 +227,13 @@ if __name__ == '__main__':
                         metavar="n",
                         default=100,
                         help="indicates the number of trees that will be used")
+
+    parser.add_argument("--filtering",
+                        type = str2bool,
+                        const=True,
+                        default=False,
+                        nargs='?',
+                        help="Decides wether the found patterns are to be filtered or not")
 
     parser.add_argument("--test-file-suffix",
                         type=str,

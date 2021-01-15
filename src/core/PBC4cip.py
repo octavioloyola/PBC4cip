@@ -8,6 +8,7 @@ from core.DistributionTester import PureNodeStopCondition, AlwaysTrue
 from core.Item import SubsetRelation
 from core.Dataset import Dataset
 from core.Evaluation import CrispAndPartitionEvaluation, Evaluate
+from core.PatternFilter import MaximalPatternsGlobalFilter
 from tqdm import tqdm
 
 
@@ -15,21 +16,49 @@ class PBC4cip:
 
     def __init__(self, file):
         self.File = file
+        self.miner = None
         self.Dataset = Dataset(self.File)
+        #self.Dataset = None
         self.EmergingPatterns = list()
         self.TrainingSample = None
         self.MinimalPatternSupport = None
         self.NormalizingVector = None
         self.__votesSum = None
         self.__classDistribution = None
+    
+    """
+    def set_dataset(self, file):
+        self.Dataset = Dataset(file)
+    
+    def get_dataset(self):
+        return self.Dataset
+    
+    def del_dataset(self):
+        del self.Dataset
+    """
 
-    def Training(self, multivariate, treeCount=None):
+    def arg_max (self, source):
+        idx = 0
+        val = source[0]
+
+        for (i, elem) in enumerate(source, start=0):
+            if source[i] > val:
+                idx = i
+                val = source[i]
+        
+        return idx
+
+    def Training(self, multivariate, filtering, treeCount=None):
         #Sorta like Train inside PBC4cip
-        filtering = False
+        #filtering = False
+        print(f"Filtering: {filtering}")
+        miner = PatternMinerWithoutFiltering(self.Dataset)
+        """
         if filtering:
             miner = PatternMiner(self.Dataset)
         else:
-            miner = PatternMinerWithoutFiltering(self.Dataset) 
+            miner = PatternMinerWithoutFiltering(self.Dataset)
+        """ 
 
         if not multivariate:
             print("nnot multivariate has been set")
@@ -53,11 +82,25 @@ class PBC4cip:
         miner.FilterRelation = SubsetRelation.Superset
 
         self.EmergingPatterns = miner.Mine()
-        #print(f"Patterns that emerged: len: {len(self.EmergingPatterns)}\n{self.EmergingPatterns}\ntype: {type(self.EmergingPatterns)}")
-        print(f"num Patterns: {len(self.EmergingPatterns)}")
-        print(f"pattern 0: {self.EmergingPatterns[0]}")
+        print(f"Patterns Have been found PBC4cip, ogLen: {len(self.EmergingPatterns)}")
+        filterer = MaximalPatternsGlobalFilter()
+        if filtering:
+            #print(f"About to Filter Patterns")
+            #print(f"OldPatterns:")
+            #for pattern in self.EmergingPatterns:
+                #print(f"{pattern}")
 
-        #self.EmergingPatterns = patterns
+            #newPatterns = filterer.Filter_test(self.EmergingPatterns)
+            self.EmergingPatterns = filterer.Filter(self.EmergingPatterns)
+            
+            #print(f"\nNewPatterns:")
+            #for pattern in self.EmergingPatterns:
+               #print(f"{pattern}")
+        #print(f"Patterns that emerged: len: {len(self.EmergingPatterns)}\n{self.EmergingPatterns}\ntype: {type(self.EmergingPatterns)}")
+        #print(f"num Patterns: {len(self.EmergingPatterns)}")
+        #print(f"pattern 0: {self.EmergingPatterns[0]}")
+
+        #dataset = self.EmergingPatterns[0].Dataset
         #self.TrainingSample = dataset.Instances
         #self.MinimalPatternSupport = 0
 
@@ -65,17 +108,17 @@ class PBC4cip:
         return self.EmergingPatterns
 
     def Classification(self, patterns):
-        print(f"\nPatternsClassify: {patterns}")
-        print(f"typePatterns: {type(patterns)} typeof: {type(patterns[0])}")
+        #print(f"\nPatternsClassify: {patterns}")
+        #print(f"typePatterns: {type(patterns)} typeof: {type(patterns[0])}")
         if not patterns or len(patterns) == 0:
             raise Exception(
                 "In order to classify, previously extracted patterns are required.")
 
         dataset = patterns[0].Dataset
 
-        print(f"Dataset: {len(dataset.Instances)}") #Training
-        print(f"DatasetSelf: {len(self.Dataset.Instances)}") #Testing
-        print(f"Ex: {self.Dataset.Instances[0]} \n type: {type(self.Dataset.Instances[0])}, len: {len(self.Dataset.Instances[0])}")
+        print(f"LenTraining: {len(dataset.Instances)}") #Training
+        print(f"LenTesting: {len(self.Dataset.Instances)}") #Testing
+        #print(f"Ex: {self.Dataset.Instances[0]} \n type: {type(self.Dataset.Instances[0])}, len: {len(self.Dataset.Instances[0])}")
 
         if not dataset:
             raise Exception(
@@ -99,11 +142,12 @@ class PBC4cip:
 
         self.ComputeVotes()
 
-        predicted = list()
+        classification_results = list()
 
         for instance in tqdm(self.Dataset.Instances, desc=f"Classifying instances for relation {self.Dataset.Relation}", unit="instance", leave=False):
+            #print("ffsdsd")
             result = self.Classify(instance)
-            predicted.append(result)
+            classification_results.append(result)
 
         #classified_as = 0
         #for instance in self.Dataset.Instances:
@@ -115,6 +159,7 @@ class PBC4cip:
             #confusion = []
 
         real = list(map(lambda instance: self.Dataset.GetFeatureValue(self.Dataset.Class, instance), self.Dataset.Instances))
+        predicted = [self.arg_max(instance) for instance in classification_results]
 
         #confusion, acc, auc = Evaluate(self.Dataset.Class[1], real, predicted)
         #print(f"Real: {real}, PredictionClass {self.Dataset.Class[1]}, real eval: {evaluation} ")
@@ -225,3 +270,4 @@ class PBC4cip:
                 classDistribution[classValue] = 0
 
         return classDistribution
+

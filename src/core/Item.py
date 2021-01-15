@@ -180,10 +180,10 @@ class CutPointBasedBuilder(ItemBuilder):
                 f"Unexpected type of selector {generalSelector.__class__.__name__}. Was expecting CutPointSelector")
 
         if index == 0:
-            print(f"Index 0 LessThan")
+            #print(f"Index 0 LessThan")
             return LessOrEqualThanItem(generalSelector.Dataset, generalSelector.Feature, generalSelector.CutPoint)
         elif index == 1:
-            print(f"Index 1 GreaterThan")
+            #print(f"Index 1 GreaterThan")
             return GreatherThanItem(generalSelector.Dataset, generalSelector.Feature, generalSelector.CutPoint)
         else:
             raise Exception("Invalid index value for CutPointSelector")
@@ -206,7 +206,7 @@ class ValueAndComplementBasedBuilder(ItemBuilder):
 
 class MultipleValuesBasedBuilder(ItemBuilder):
     def GetItem(self, generalSelector, index):
-        print(f"GetItem MultipleValuesBasedBuilder")
+        #print(f"GetItem MultipleValuesBasedBuilder")
         if not isinstance(generalSelector, MultipleValuesSelector):
             raise Exception(
                 f"Unexpected type of selector {generalSelector.__class__.__name__}. Was expecting ValueAndComplementSelector")
@@ -335,6 +335,7 @@ class MultivariateCutPointBasedBuilder(ItemBuilder):
 
 class ItemComparer(object):
     def Compare(self, left, right):
+        #print(f"ItemComparer left: {left.Feature}, right: {right.Feature}")
         if left.Feature == right.Feature or (not left.Feature and not right.Feature):
             return left.CompareTo(right)
         return SubsetRelation.Unrelated

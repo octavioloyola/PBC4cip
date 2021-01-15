@@ -23,10 +23,10 @@ class SplitIteratorProvider(object):
         #return NominalSplitIterator(self.Dataset, currentFeature)
         #print(f"currFeature {currentFeature}")
         if self.Dataset.IsNominalFeature(currentFeature):
-            print(f"{currentFeature} isNominal")
+            #print(f"{currentFeature} isNominal")
             return NominalSplitIterator(self.Dataset, currentFeature)
         else:
-            print(f"{currentFeature} isNumeric")
+            #print(f"{currentFeature} isNumeric")
             return NumericSplitIterator(self.Dataset, currentFeature)
 
 
@@ -43,7 +43,7 @@ class SplitIterator(object):
 
     # region Common methods
     def Initialize(self, instances):
-        print(f"SplitIterator is initializing")
+        #print(f"SplitIterator is initializing")
         if not self.Model:
             raise Exception("Model is null")
         if self.Class[1] in ['numeric', 'real', 'integer', 'string']:
@@ -88,13 +88,13 @@ class NumericSplitIterator(SplitIterator):
         self.__selectorFeatureValue = 0
 
     def Initialize(self, instances):
-        print(f"NumericSplitIterator is initializing")
+        #print(f"NumericSplitIterator is initializing")
         super().Initialize(instances)
 
         self._initialized = True
         #print(f"instances numericSplit: {instances}")
-        print(f"instances numericSplitLen: {len(instances)}")
-        print(f"feature: {self.Feature}")
+        #print(f"instances numericSplitLen: {len(instances)}")
+        #print(f"feature: {self.Feature}")
         
 
         if self.Dataset.IsNominalFeature(self.Feature):
@@ -135,7 +135,7 @@ class NumericSplitIterator(SplitIterator):
         self.CurrentDistribution[1] = FindDistribution(
             self.__sortedInstances, self.Model, self.Dataset.Class)
 
-        print(f"CurrDist[0]: {self.CurrentDistribution[0]}, CurrDist[1]: {self.CurrentDistribution[1]}")
+        #print(f"CurrDist[0]: {self.CurrentDistribution[0]}, CurrDist[1]: {self.CurrentDistribution[1]}")
 
         if (len(self.__sortedInstances) == 0):
             return

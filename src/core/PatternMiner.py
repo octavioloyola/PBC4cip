@@ -145,8 +145,9 @@ class PatternMinerWithoutFiltering:
     # region Pattern extraction
 
     def Mine(self):
-        print("Without Filtering Mine begins")
-        print(self.PatternFound)
+        #print("Without Filtering Mine begins")
+        #print(self.PatternFound)
+        #print(f"ItemComparer: {ItemComparer}")
         self.Patterns = list()
         self.__emergingPatternCreator = EmergingPatternCreator(self.Dataset)
         self.__emergingPatternComparer = EmergingPatternComparer(
@@ -163,7 +164,7 @@ class PatternMinerWithoutFiltering:
         return self.Patterns
 
     def DoMine(self, emergingPatternCreator, action):
-        print("does it enter DoMine Without Filtering")
+        #print("does it enter DoMine Without Filtering")
         #patternsList = []
         freeze_support()  # for Windows support
         featureCount = 0
@@ -176,12 +177,19 @@ class PatternMinerWithoutFiltering:
         #print(f"amount of featuresToConsider: {self.Dataset.Attributes}")
         #print(f"Dataset class: {self.Dataset.ClassInformation.Feature}")
         self.DecisionTreeBuilder.OnSelectingFeaturesToConsider = SampleWithoutRepetition
-        print(f" featureCount: {self.DecisionTreeBuilder.FeatureCount} and {featureCount}")
+        #print(f" featureCount: {self.DecisionTreeBuilder.FeatureCount} and {featureCount}")
 
         #print(f"amount of leaves: {type(tree.Leaves())}")
 
         #print(f"amount of Trees: {self.TreeCount}")
+
+        ##self.DecisionTreeBuilder.OnSelectingFeaturesToConsider = SampleWithoutRepetition
+        ##tree = self.DecisionTreeBuilder.Build()
+        ##treeClassifier = DecisionTreeClassifier(tree)
+
         for i in tqdm(range(self.TreeCount), unit="tree", desc="Building trees and extracting patterns", leave=False):
+        #for i in range(self.TreeCount):    
+            #print(f"tree: {i}")
             self.DecisionTreeBuilder.OnSelectingFeaturesToConsider = SampleWithoutRepetition
             #print(f"featuresToConsider: {self.DecisionTreeBuilder.OnSelectingFeaturesToConsider}")
             tree = self.DecisionTreeBuilder.Build()
@@ -199,20 +207,20 @@ class PatternMinerWithoutFiltering:
     # endregion
 
     def CreateTreeAndExtractpatterns(self, emergingPatternCreator, action, iterable):
-        print("Create Tree and Extract Patterns")
+        #print("Create Tree and Extract Patterns")
         tree = self.DecisionTreeBuilder.Build()
         treeClassifier = DecisionTreeClassifier(tree)
         emergingPatternCreator.ExtractPatterns(treeClassifier, action)
 
     def PatternFound(self, pattern):
-        print(f"\npattern Found no filter: {pattern}")
+        #print(f"\npattern Found no filter: {pattern}")
         #self.__minimal.Add(pattern)
         
         if self.EPTester(pattern.Counts, self.Dataset.Model, self.Dataset.Class):
             #print(f"sssssss")
             simplifiedPattern = self.__emergingPatternSimplifier.Simplify(pattern)
-            print(f"simplified Pattern: {simplifiedPattern}")
+            #print(f"simplified Pattern: {simplifiedPattern}")
             self.PatternsList.append(simplifiedPattern)
                 
-        print(f"size of patternsList (in lambda): {len(self.PatternsList)}")
-        print(f"patternsList Contents: {self.PatternsList}\n \n")
+        #print(f"size of patternsList (in lambda): {len(self.PatternsList)}")
+        #print(f"patternsList Contents: {self.PatternsList}\n \n")

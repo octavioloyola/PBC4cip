@@ -117,7 +117,7 @@ class EmergingPatternCreator(object):
     def ExtractPatterns(self, treeClassifier, patternFound):
         #print("\nextractt Patternss")
         #print(f"In ExtractPatterns ClassFeature: {self.Dataset.Class}")
-        print(patternFound)
+        #print(f"patternFound: {patternFound}")
         context = list()
         self.DoExtractPatterns(
             treeClassifier.DecisionTree.TreeRootNode, context, patternFound)
@@ -147,9 +147,11 @@ class EmergingPatternCreator(object):
 
 class EmergingPatternComparer(object):
     def __init__(self, itemComparer):
+        #print(f"EmergingPatternCreatore: {itemComparer}")
         self.Comparer = itemComparer
 
     def Compare(self, leftPattern, rightPattern):
+        #print(f"Ever enter Here?")
         directSubset = self.IsSubset(leftPattern, rightPattern)
         inverseSubset = self.IsSubset(rightPattern, leftPattern)
         if (directSubset and inverseSubset):
@@ -161,16 +163,87 @@ class EmergingPatternComparer(object):
         else:
             return SubsetRelation.Unrelated
 
+    def Compare_test(self, leftPattern, rightPattern):
+        print(f"Ever enter Here?")
+        directSubset = self.IsSubset_test(leftPattern, rightPattern)
+        print("inverse")
+        inverseSubset = self.IsSubset_test(rightPattern, leftPattern)
+        
+        print(f"direct: {directSubset} inverse: {inverseSubset}")
+        if (directSubset and inverseSubset):
+            return SubsetRelation.Equal
+        elif (directSubset):
+            return SubsetRelation.Subset
+        elif (inverseSubset):
+            return SubsetRelation.Superset
+        else:
+            return SubsetRelation.Unrelated
+
     def IsSubset(self, pat1, pat2):
         def f(x, y):
-            relation = self.Comparer(x, y)
+            relation = self.Comparer.Compare(self, x, y)
             return relation == SubsetRelation.Equal or relation == SubsetRelation.Subset
 
-        allComparisons = [[f(x, y) for y in pat2.Items]for x in pat1.Items]
+        for x in pat2.Items:
+            all_bool = False
+            for y in pat1.Items:
+                if f(y, x):
+                    #print(f"a 2 or 3 was returned")
+                    all_bool = True
+                    break
+                #all_bool = False
+                #print(f"when 2 or 3, avoid this")
+            if not all_bool:
+                #print(f"returned False")
+                return False
+        #print(f"returned True")
+        return True
+
+        #for x in pat2.Items:
+        #    all_bool = True
+        #    for y in pat1.Items:
+        #        if f(y, x):
+        #            break
+        #        all_bool = False
+        #    if not all_bool:
+        #        return False
+        #return True
+
+        allComparisons = [[f(x, y) for x in pat1.Items]for y in pat2.Items]
+        #print(f"AllComparisons: {allComparisons}")
         result = all(any(x) for x in allComparisons)
+        #print(f"resultCom: {result}")
+        return result 
+
+    def IsSubset_test(self, pat1, pat2):
+        print(f"pat1: {pat1}, pat2: {pat2}")
+        def f(x, y):
+            relation = self.Comparer.Compare(self, x, y)
+            print(f"x: {x} y: {y} relation_test: {relation} bool:{relation == SubsetRelation.Equal or relation == SubsetRelation.Subset}")
+            return relation == SubsetRelation.Equal or relation == SubsetRelation.Subset
+
+        for x in pat2.Items:
+            all_bool = False
+            for y in pat1.Items:
+                if f(y, x):
+                    print(f"a 2 or 3 was returned")
+                    all_bool = True
+                    break
+                #all_bool = False
+                #print(f"when 2 or 3, avoid this")
+            if not all_bool:
+                print(f"returned False")
+                return False
+        print(f"returned True")
+        return True  
+
+        #allComparisons = [[f(x, y) for x in pat1.Items]for y in pat2.Items]
+        #print(f"AllComparisons: {allComparisons}")
+        #result = all(any(x) for x in allComparisons)
+        #print(f"resultCom: {result}")
         # result = all(any(f(x, y) for y in pat2.Items)
         #              for x in pat1.Items)
-        return result
+        #return result
 
 
 class EmergingPatternSimplifier(object):

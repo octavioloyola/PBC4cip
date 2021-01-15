@@ -11,13 +11,12 @@ def ReadARFF(file):
 
 
 def ReadAndDeleteARFF(file):
-    print(f"Banda")
     dataset = ReadARFF(file)
     if os.path.exists(file):
         # We should check if file exists or not not before deleting them
-        print(f"File Does Exist")
+        #print(f"File Does Exist")
         os.remove(file)
-        print(f"File got removed")
+        #print(f"File got removed")
     else:
         print(f"Can not delete the file '{file}' as it doesn't exists")
     return dataset
@@ -40,7 +39,7 @@ def ReadDAT(file):
                         newline = newline.split(
                         )[0]+' '+newline.split()[1]+' '+newline.split()[2]+'\n'
                 new_file.write(newline)
-    print(f"Is it closed? {new_file.closed}")
+    #print(f"Is it closed? {new_file.closed}")
     return ReadAndDeleteARFF(new_f)
 
 
@@ -176,7 +175,7 @@ def WriteClassificationResults(confusion, acc, auc, originalFile, outputDirector
     return name
 
 
-def WriteResultsCSV(confusion, acc, auc, originalFile, outputDirectory, resultsId):
+def WriteResultsCSV(confusion, acc, auc, numPatterns, originalFile, outputDirectory, resultsId, filtering):
     #if not evaluation:
         #return ""
     if not os.path.exists(outputDirectory):
@@ -192,11 +191,11 @@ def WriteResultsCSV(confusion, acc, auc, originalFile, outputDirectory, resultsI
         results_out = open(name, "a+", newline='\n', encoding='utf-8')
     else:
         results_out = open(name, "w+", newline='\n', encoding='utf-8')
-        results_out.write(f"File,AUC,ACC\n")
+        results_out.write(f"File,AUC,ACC,NumPatterns,Filtering\n")
 
     #auc = evaluation.ConfusionMatrix.AUCMeasure(0)
 
-    results_out.write(f"{datasetName},{str(auc)}, {str(acc)}\n")
+    results_out.write(f"{datasetName},{str(auc)}, {str(acc)}, {str(numPatterns)}, {str(filtering)}\n")
 
     results_out.close()
 

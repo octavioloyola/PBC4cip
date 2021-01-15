@@ -44,6 +44,7 @@ class WinningSplitSelector:
         return False
 
     def IsWinner(self):
+        print(f"self.List: {self.List} size: {len(self.List)}")
         return len(self.List) > 0
 
 

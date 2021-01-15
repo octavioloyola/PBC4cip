@@ -48,6 +48,7 @@ class Dataset(object):
     # region Attribute handling
 
     def GetAttribute(self, attribute):
+        print(f"GetAttribute: {list(filter(lambda attr: attr[0] == attribute, self.Model))}")
         return list(filter(lambda attr: attr[0] == attribute, self.Model))[0]
 
     def GetAttributeNames(self):

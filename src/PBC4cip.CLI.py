@@ -18,7 +18,7 @@ def CheckSuffix(file, suffix):
 
 
 def GetFilesFromDirectory(directory):
-    print("ddddd")
+    print("aaaa")
     print(directory)
     files = []
     if os.path.isdir(directory):
@@ -32,20 +32,31 @@ def GetFilesFromDirectory(directory):
 
 
 def Train(file, outputDirectory, treeCount, multivariate, suffix=None):
+    print(f"Training is about to begin")
     classifier = PBC4cip(file)
     patterns = classifier.Training(multivariate, treeCount)
-    WritePatternsCSV(patterns, file, outputDirectory, suffix)
-    WritePatternsBinary(patterns, file, outputDirectory, suffix)
+    WritePatternsCSV(patterns, file, outputDirectory, suffix) #Create the csv file with patterns
+    WritePatternsBinary(patterns, file, outputDirectory, suffix) #Create the .pypatterns file
 
 
 def Classify(file, outputDirectory, resultsId, delete, suffix=None):
+    print("Testing is about to begin")
 
     try:
         classifier = PBC4cip(file)
         patterns = ReadPatternsBinary(file, outputDirectory, delete, suffix)
-        evaluation = classifier.Classification(patterns)
-        WriteClassificationResults(evaluation, file, outputDirectory, suffix)
-        WriteResultsCSV(evaluation, file, outputDirectory, resultsId)
+        confusion, acc, auc = classifier.Classification(patterns)
+        #WriteClassificationResults(confusion, acc, auc, file, outputDirectory, suffix)
+        WriteResultsCSV(confusion, acc, auc, file, outputDirectory, resultsId)
+
+        for i in range(len(confusion[0])):
+            for j in range(len(confusion[0])):
+                print(f"{confusion[i][j]} ", end='')
+            print("")
+        print(f"acc: {acc}, auc: {auc}, numPatterns: {len(patterns)}")
+
+    
+    
     except Exception as e:
         print(e)
 

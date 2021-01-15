@@ -11,10 +11,13 @@ def ReadARFF(file):
 
 
 def ReadAndDeleteARFF(file):
+    print(f"Banda")
     dataset = ReadARFF(file)
     if os.path.exists(file):
         # We should check if file exists or not not before deleting them
+        print(f"File Does Exist")
         os.remove(file)
+        print(f"File got removed")
     else:
         print(f"Can not delete the file '{file}' as it doesn't exists")
     return dataset
@@ -37,6 +40,7 @@ def ReadDAT(file):
                         newline = newline.split(
                         )[0]+' '+newline.split()[1]+' '+newline.split()[2]+'\n'
                 new_file.write(newline)
+    print(f"Is it closed? {new_file.closed}")
     return ReadAndDeleteARFF(new_f)
 
 
@@ -134,7 +138,7 @@ def WritePatternsCSV(patterns, originalFile, outputDirectory, suffix=None):
     return name
 
 
-def WriteClassificationResults(evaluation, originalFile, outputDirectory, suffix=None):
+def WriteClassificationResults(confusion, acc, auc, originalFile, outputDirectory, suffix=None):
     if not evaluation:
         return ""
     if not suffix:
@@ -172,9 +176,9 @@ def WriteClassificationResults(evaluation, originalFile, outputDirectory, suffix
     return name
 
 
-def WriteResultsCSV(evaluation, originalFile, outputDirectory, resultsId):
-    if not evaluation:
-        return ""
+def WriteResultsCSV(confusion, acc, auc, originalFile, outputDirectory, resultsId):
+    #if not evaluation:
+        #return ""
     if not os.path.exists(outputDirectory):
         print(f"Creating output directory: {outputDirectory}")
         os.makedirs(outputDirectory)
@@ -188,11 +192,11 @@ def WriteResultsCSV(evaluation, originalFile, outputDirectory, resultsId):
         results_out = open(name, "a+", newline='\n', encoding='utf-8')
     else:
         results_out = open(name, "w+", newline='\n', encoding='utf-8')
-        results_out.write(f"File,AUC\n")
+        results_out.write(f"File,AUC,ACC\n")
 
-    auc = evaluation.ConfusionMatrix.AUCMeasure(0)
+    #auc = evaluation.ConfusionMatrix.AUCMeasure(0)
 
-    results_out.write(f"{datasetName},{str(auc)}\n")
+    results_out.write(f"{datasetName},{str(auc)}, {str(acc)}\n")
 
     results_out.close()
 

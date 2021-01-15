@@ -14,6 +14,7 @@ from core.FilteredCollection import FilteredCollection
 class PatternMiner:
 
     def __init__(self, dataset, treeCount=None, featureCount=None, minePatternsWhileBuildingTree=None):
+        print("Mining with Filter")
         self.Dataset = dataset
         self.Patterns = list()
         self.DecisionTreeBuilder = None
@@ -113,6 +114,7 @@ class PatternMiner:
 class PatternMinerWithoutFiltering:
 
     def __init__(self, dataset, treeCount=None, featureCount=None, minePatternsWhileBuildingTree=None):
+        print("Pattern Miner without filter init ")
         self.Dataset = dataset
         self.Patterns = list()
         self.PatternsList = list()
@@ -143,7 +145,7 @@ class PatternMinerWithoutFiltering:
     # region Pattern extraction
 
     def Mine(self):
-        print("Without Filtering Mine")
+        print("Without Filtering Mine begins")
         print(self.PatternFound)
         self.Patterns = list()
         self.__emergingPatternCreator = EmergingPatternCreator(self.Dataset)
@@ -171,27 +173,27 @@ class PatternMinerWithoutFiltering:
             featureCount = int(math.log(len(self.Dataset.Attributes), 2) + 1)
 
         self.DecisionTreeBuilder.FeatureCount = featureCount
-        print(f"amount of featuresToConsider: {self.Dataset.Attributes}")
-        print(f"Dataset class: {self.Dataset.ClassInformation.Feature}")
+        #print(f"amount of featuresToConsider: {self.Dataset.Attributes}")
+        #print(f"Dataset class: {self.Dataset.ClassInformation.Feature}")
         self.DecisionTreeBuilder.OnSelectingFeaturesToConsider = SampleWithoutRepetition
-        print(f"featureCount: {self.DecisionTreeBuilder.FeatureCount} and {featureCount}")
+        print(f" featureCount: {self.DecisionTreeBuilder.FeatureCount} and {featureCount}")
 
         #print(f"amount of leaves: {type(tree.Leaves())}")
 
-        print(f"amount of Trees: {self.TreeCount}")
-        for i in tqdm(range(1), unit="tree", desc="Building trees and extracting patterns", leave=False):
+        #print(f"amount of Trees: {self.TreeCount}")
+        for i in tqdm(range(self.TreeCount), unit="tree", desc="Building trees and extracting patterns", leave=False):
             self.DecisionTreeBuilder.OnSelectingFeaturesToConsider = SampleWithoutRepetition
-            print(f"featuresToConsider: {self.DecisionTreeBuilder.OnSelectingFeaturesToConsider}")
+            #print(f"featuresToConsider: {self.DecisionTreeBuilder.OnSelectingFeaturesToConsider}")
             tree = self.DecisionTreeBuilder.Build()
             #classFeature = self.Dataset.ClassInformation.Feature
             #print(f"amount of leaves: {type(tree.Leaves)}")
             treeClassifier = DecisionTreeClassifier(tree)
             #up until here everything is ok!!
-            print(f"about to extract Patterns in tree")
+            #print(f"about to extract Patterns in tree")
             emergingPatternCreator.ExtractPatterns(treeClassifier, action)
 
-        print(f"PatternsListLen: {len(self.PatternsList)}")
-        print(f"PatternsList[0]: {self.PatternsList[0]}")
+        #print(f"PatternsListLen: {len(self.PatternsList)}")
+        #print(f"PatternsList[0]: {self.PatternsList[0]}")
         return self.PatternsList
 
     # endregion
@@ -203,14 +205,14 @@ class PatternMinerWithoutFiltering:
         emergingPatternCreator.ExtractPatterns(treeClassifier, action)
 
     def PatternFound(self, pattern):
-        print(f"pattern Found: {pattern}")
+        print(f"\npattern Found no filter: {pattern}")
         #self.__minimal.Add(pattern)
         
         if self.EPTester(pattern.Counts, self.Dataset.Model, self.Dataset.Class):
-            print(f"sssssss")
+            #print(f"sssssss")
             simplifiedPattern = self.__emergingPatternSimplifier.Simplify(pattern)
             print(f"simplified Pattern: {simplifiedPattern}")
             self.PatternsList.append(simplifiedPattern)
                 
         print(f"size of patternsList (in lambda): {len(self.PatternsList)}")
-        print(f"patternsList: {self.PatternsList}\n \n")
+        print(f"patternsList Contents: {self.PatternsList}\n \n")

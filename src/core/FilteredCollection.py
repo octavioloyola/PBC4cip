@@ -23,7 +23,7 @@ class FilteredCollection(object):
         self.__current = current
 
     def Add(self, item):
-        print(f"item: {item}")
+        #print(f"item: {item}")
         #print(f"adding")
 
         #print(f"relation: {self.__relationToFind} SubsetRelation: {SubsetRelation.Unrelated}")

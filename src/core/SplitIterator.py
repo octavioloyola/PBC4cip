@@ -23,10 +23,10 @@ class SplitIteratorProvider(object):
         #return NominalSplitIterator(self.Dataset, currentFeature)
         #print(f"currFeature {currentFeature}")
         if self.Dataset.IsNominalFeature(currentFeature):
-            print("isNominal")
+            print(f"{currentFeature} isNominal")
             return NominalSplitIterator(self.Dataset, currentFeature)
         else:
-            print("isNumeric")
+            print(f"{currentFeature} isNumeric")
             return NumericSplitIterator(self.Dataset, currentFeature)
 
 
@@ -43,6 +43,7 @@ class SplitIterator(object):
 
     # region Common methods
     def Initialize(self, instances):
+        print(f"SplitIterator is initializing")
         if not self.Model:
             raise Exception("Model is null")
         if self.Class[1] in ['numeric', 'real', 'integer', 'string']:
@@ -87,7 +88,14 @@ class NumericSplitIterator(SplitIterator):
         self.__selectorFeatureValue = 0
 
     def Initialize(self, instances):
+        print(f"NumericSplitIterator is initializing")
         super().Initialize(instances)
+
+        self._initialized = True
+        #print(f"instances numericSplit: {instances}")
+        print(f"instances numericSplitLen: {len(instances)}")
+        print(f"feature: {self.Feature}")
+        
 
         if self.Dataset.IsNominalFeature(self.Feature):
             raise Exception("Cannot use this iterator on non-numeric feature")
@@ -100,14 +108,34 @@ class NumericSplitIterator(SplitIterator):
             raise Exception(
                 f"Feature type {self.Feature[1]} is not considered")
 
+        #print(f"type{type(instances)}")
+        #print(f"typeInst{type(instances[0])}")
+        #print(f"typeFirst{type(instances[0][0])}")
+        #print(f"typeSecond{type(instances[0][1])}")
+        #print(f"Idx: {self.GetFeatureIdx()}")
+        #print(f"instances {instances}")
+
+        instList = list(instances)
         self.__sortedInstances = list(
-            filter(lambda element: not self.IsMissing(element[0]), instances))
-        self.__sortedInstances.sort(
-            key=lambda element: self.GetFeatureValue(element[0]))
+            filter(lambda element: not self.IsMissing(element[0]), instList))
+        #self.__sortedInstances.sort(
+            #key=lambda element: self.GetFeatureValue(element[0]))
+        #self.__sortedInstances.sort(
+            #key=lambda element: element[0][self.GetFeatureIdx()])
+
+        sortedInsts = sorted(instList, key=lambda element: element[0][self.GetFeatureIdx()])
+        #print(f"instances{instList}")
+        #print(f"sorted:\n {sortedInsts}")
+        self.__sortedInstances = sortedInsts
+
+
+        #print(f"sorted:\n {self.__sortedInstances}")
 
         self.CurrentDistribution[0] = [0]*self._numClasses
         self.CurrentDistribution[1] = FindDistribution(
             self.__sortedInstances, self.Model, self.Dataset.Class)
+
+        print(f"CurrDist[0]: {self.CurrentDistribution[0]}, CurrDist[1]: {self.CurrentDistribution[1]}")
 
         if (len(self.__sortedInstances) == 0):
             return
@@ -121,6 +149,7 @@ class NumericSplitIterator(SplitIterator):
             return False
 
         self.__currentIndex += 1
+        #print(f"getCutting: {self.__cuttingStrategy}")
         while self.__currentIndex < len(self.__sortedInstances) - 1:
             instance = self.__sortedInstances[self.__currentIndex][0]
             objClass = self.GetClassValue(instance)

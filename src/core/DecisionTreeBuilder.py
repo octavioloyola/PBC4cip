@@ -23,6 +23,7 @@ class DecisionTreeBuilder():
         self.SplitIteratorProvider = SplitIteratorProvider(self.Dataset)
 
     def Build(self):
+        print("Enter build in DTB")
         if self.MinimalSplitGain <= 0:
             self.MinimalSplitGain = 1e-30
 
@@ -39,10 +40,10 @@ class DecisionTreeBuilder():
 
         filteredObjMembership = tuple(
             filter(lambda x: x[1] >= self.MinimalInstanceMembership, objectMebership))
-        print(f"filteredObj: {len(filteredObjMembership)}")
-        print(f"tuples[0]: {filteredObjMembership[0]}")
-        print(f"tuples[50]: {filteredObjMembership[50]}")
-        print(f"tuples[134]: {filteredObjMembership[134]}")
+        #print(f"filteredObj: {len(filteredObjMembership)}")
+        #print(f"tuples[0]: {filteredObjMembership[0]}")
+        #print(f"tuples[50]: {filteredObjMembership[50]}")
+        #print(f"tuples[134]: {filteredObjMembership[134]}")
 
         parentDistribution = FindDistribution(
             filteredObjMembership, self.Dataset.Model, self.Dataset.Class)
@@ -57,36 +58,43 @@ class DecisionTreeBuilder():
 
     #
     def FillNode(self, node, instanceTuples, level, currentContext):
-        #print("fillingNodes")
+        print("nodes to Fill")
         if self.StopCondition(node.Data, self.Dataset.Model, self.Dataset.Class):
+            print("Return due to Stop Condition")
             return
         if self.MaxDepth >= 0 and (level >= self.MaxDepth - 1):
+            print("Return due to Max Depth")
             return
         if sum(node.Data) <= self.MinimalObjByLeaf:
+            print("Return due to MinimalObjByLeaf")
             return
         
 
         whichBetterToFind = 1
         winningSplitSelector = WinningSplitSelector(whichBetterToFind)
-        currentGain = 0
+        #currentGain = 0
 
         sampleFeatures = self.OnSelectingFeaturesToConsider(
             list(map(lambda attribute: attribute[0], self.Dataset.Attributes)), self.FeatureCount)
         #print(f"SampleFeatures {sampleFeatures} and self.Dataset.Class[0]: {self.Dataset.Class}")
+        #print(f"sampleFeatures: {sampleFeatures}")
+
         for feature in sampleFeatures:
-            #if feature != self.Dataset.Class[0]:
-                splitIterator = self.SplitIteratorProvider.GetSplitIterator(
-                    feature)
+            print(f"\nsampleFeature {feature}")
+            #print(f"classFeature {self.Dataset.Class[0]}, type is {type(self.Dataset.Class)}")
+            if feature != self.Dataset.Class[0]:
+                splitIterator = self.SplitIteratorProvider.GetSplitIterator(feature)
                 splitIterator.Initialize(instanceTuples)
                 #print(f"splitIterator._instances: {splitIterator._instances}")
                 while splitIterator.FindNext():
+                    print(f"DecisionTreeBuilder: node.Data {node.Data}  currDistribution: {splitIterator.CurrentDistribution}")
                     currentGain = self.DistributionEvaluator(
                         node.Data, splitIterator.CurrentDistribution)
                     #print(f"currentGainUni {currentGain}")
                     if currentGain >= self.MinimalSplitGain:
                         winningSplitSelector.EvaluateThis(
                             currentGain, splitIterator, level) #currentGain y splitIterator es iwal
-        print(f"WinningSplitSelector {winningSplitSelector.List} \n")
+        print(f"WinningSplitSelector {winningSplitSelector.List} \n\n")
         if winningSplitSelector.IsWinner():
             maxSelector = winningSplitSelector.WinningSelector
             node.ChildSelector = maxSelector
@@ -130,6 +138,7 @@ def CreateChildrenInstances(instances, selector, threshold=None):
     return result
 
 
+
 class SelectorContext():
     def __init__(self):
         self.Index = 0
@@ -165,6 +174,7 @@ class MultivariateDecisionTreeBuilder(DecisionTreeBuilder):
         result.TreeRootNode = DecisionTreeNode()
         result.TreeRootNode.Data = parentDistribution
 
+        print("About to Fill Node")
         self.FillNode(result.TreeRootNode,
                       filteredObjMembership, 0, currentContext)
 
@@ -172,12 +182,15 @@ class MultivariateDecisionTreeBuilder(DecisionTreeBuilder):
 
     #
     def FillNode(self, node, instanceTuples, level, currentContext):
-        print("fillNode")
+        print("Nodes to fillMult")
         if self.StopCondition(node.Data, self.Dataset.Model, self.Dataset.Class):
+            print("return a")
             return
         if self.MaxDepth >= 0 and level >= self.MaxDepth - 1:
+            print("return b")
             return
         if sum(node.Data) <= self.MinimalObjByLeaf:
+            print("return c")
             return
 
         whichBetterToFind = 1
@@ -241,6 +254,9 @@ class MultivariateDecisionTreeBuilder(DecisionTreeBuilder):
                 else:
                     featureIterator.Add(bestFeature)
 
+        print(f"WinningSplitSelectorLen: {len(winningSplitSelector)}")
+        print("vvvv")
+        print(f"WinningSplitSelector {winningSplitSelector.List}")
         if winningSplitSelector.IsWinner():
             maxSelector = winningSplitSelector.WinningSelector
             node.ChildSelector = maxSelector

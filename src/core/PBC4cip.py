@@ -24,6 +24,7 @@ class PBC4cip:
         self.__classDistribution = None
 
     def Training(self, multivariate, treeCount=None):
+        #Sorta like Train inside PBC4cip
         filtering = False
         if filtering:
             miner = PatternMiner(self.Dataset)
@@ -31,12 +32,13 @@ class PBC4cip:
             miner = PatternMinerWithoutFiltering(self.Dataset) 
 
         if not multivariate:
-            print("nnot multivariate")
+            print("nnot multivariate has been set")
             miner.DecisionTreeBuilder = DecisionTreeBuilder(miner.Dataset)
             #miner.DecisionTreeBuilder.DistributionEvaluator = MultiClassHellinger
+            #miner.DecisionTreeBuilder.DistributionEvaluator = Hellinger
             miner.DecisionTreeBuilder.DistributionEvaluator = QuinlanGain
         else:
-            print("multivariate")
+            print("multivariate miner has been set")
             miner.DecisionTreeBuilder = MultivariateDecisionTreeBuilder(miner.Dataset)
             miner.DecisionTreeBuilder.DistributionEvaluator = MultiClassHellinger
 
@@ -54,14 +56,26 @@ class PBC4cip:
         #print(f"Patterns that emerged: len: {len(self.EmergingPatterns)}\n{self.EmergingPatterns}\ntype: {type(self.EmergingPatterns)}")
         print(f"num Patterns: {len(self.EmergingPatterns)}")
         print(f"pattern 0: {self.EmergingPatterns[0]}")
+
+        #self.EmergingPatterns = patterns
+        #self.TrainingSample = dataset.Instances
+        #self.MinimalPatternSupport = 0
+
+        #self.ComputeVotes()
         return self.EmergingPatterns
 
     def Classification(self, patterns):
+        print(f"\nPatternsClassify: {patterns}")
+        print(f"typePatterns: {type(patterns)} typeof: {type(patterns[0])}")
         if not patterns or len(patterns) == 0:
             raise Exception(
                 "In order to classify, previously extracted patterns are required.")
 
         dataset = patterns[0].Dataset
+
+        print(f"Dataset: {len(dataset.Instances)}") #Training
+        print(f"DatasetSelf: {len(self.Dataset.Instances)}") #Testing
+        print(f"Ex: {self.Dataset.Instances[0]} \n type: {type(self.Dataset.Instances[0])}, len: {len(self.Dataset.Instances[0])}")
 
         if not dataset:
             raise Exception(
@@ -74,8 +88,16 @@ class PBC4cip:
         self.EmergingPatterns = patterns
         self.TrainingSample = dataset.Instances
         self.MinimalPatternSupport = 0
+        
+        #My changes here
+        numPatterns = len(self.EmergingPatterns)
+        print(f"numPatterns: {numPatterns}")
+        patternLength = 0.0
+        combinationLength = 0.0
+        numClasses = len(self.Dataset.Class)
+        print(f"numClasses: {numClasses}")
 
-        self.Train()
+        self.ComputeVotes()
 
         predicted = list()
 
@@ -83,21 +105,43 @@ class PBC4cip:
             result = self.Classify(instance)
             predicted.append(result)
 
-        real = list(map(lambda instance: self.Dataset.GetFeatureValue(
-            self.Dataset.Class, instance), self.Dataset.Instances))
+        #classified_as = 0
+        #for instance in self.Dataset.Instances:
+            #classification_result = self.Classify(instance)
+            #for i, feature_val in enumerate(classification_result):
+                #if classification_result[i] > classification_result[classified_as]:
+                    #classified_as = i
+            
+            #confusion = []
 
-        evaluation = Evaluate(self.Dataset.Class[1], real, predicted)
+        real = list(map(lambda instance: self.Dataset.GetFeatureValue(self.Dataset.Class, instance), self.Dataset.Instances))
 
-        return evaluation
+        #confusion, acc, auc = Evaluate(self.Dataset.Class[1], real, predicted)
+        #print(f"Real: {real}, PredictionClass {self.Dataset.Class[1]}, real eval: {evaluation} ")
+        
+        #for prediction in predicted:
+            #print(f"prediction: {prediction}")
+
+        return Evaluate(self.Dataset.Class[1], real, predicted)
 
     def Classify(self, instance):
+        #print(f"NewInstance")
+        #print(f"Enter Classify PBC4cip")
         classFeature = self.Dataset.Class
         votes = [0]*len(classFeature[1])
+        #print(f"lenClassFeat: {len(classFeature[1])}")
 
         for pattern in self.EmergingPatterns:
+            #if (instance[0] == 41.0):
+            #print(f"\nep: {pattern}")
+            #print(f"epItems: {pattern.Items}")
             if pattern.IsMatch(instance):
+                #print(f"MatchFound!")
                 for i in range(len(votes)):
                     votes[i] += pattern.Supports[i]
+        
+        #if (instance[0] == 41.0):
+        #print(f"votes: {votes}")
 
         result = [0]*(len(votes))
         for i in range(len(votes)):
@@ -107,12 +151,20 @@ class PBC4cip:
             except ZeroDivisionError:
                 result[i] = 0
 
+        #if (instance[0] == 41.0):
+        #print(f"instance: {instance}")
+        #print(f"result: {result}")
+
         if sum(result) > 0:
             return result
         else:
             return self.__classDistribution
+            
 
-    def Train(self):
+    def ComputeVotes(self):
+        #Compute Votes inside PBC4cip
+        #print(f"Enter ComputeVotes")
+        #print(f"trainingSample: {self.TrainingSample}")
         instancesByClass = self.GroupInstancesByClass(
             self.TrainingSample, self.Dataset.Class)
         self.NormalizingVector = self.ComputeNormalizingVector(
@@ -126,6 +178,7 @@ class PBC4cip:
                 self.__votesSum[classValue] += pattern.Supports[classValue]
 
     def GroupInstancesByClass(self, instances, classFeature):
+        #print(f"Enter GroupInstancesByClass")
         instancesByClass = list()
         classIdx = self.Dataset.Model.index(classFeature)
 
@@ -139,6 +192,7 @@ class PBC4cip:
         return instancesByClass
 
     def ComputeNormalizingVector(self, instancesByClass):
+        #print(f"Enter ComputeNormalizing")
         vetorSum = 0
         normalizingVector = [0]*len(instancesByClass)
 
@@ -160,6 +214,7 @@ class PBC4cip:
         return normalizingVector
 
     def ComputeClassDistribution(self, instancesByClass):
+        #print(f"Enter EnterComputeClass")
         classDistribution = [0]*len(instancesByClass)
         for classValue in range(len(instancesByClass)):
             try:

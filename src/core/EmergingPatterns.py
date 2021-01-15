@@ -21,8 +21,11 @@ class EmergingPattern(object):
         self.Supports = []
 
     def IsMatch(self, instance):
+        #print(f"selfItemsEmerging: {self.Items}")
         for item in self.Items:
+            #print(f"item!: {item}")
             if not item.IsMatch(instance):
+                #print(f"item: {item} did not match")
                 return False
         return True
 
@@ -37,6 +40,7 @@ class EmergingPattern(object):
 
     def CalculateSupports(self, data, classFeatureParam=None):
         #Never seen when it enters here
+        #print("Supports are being calculated")
         if classFeatureParam == None:
             classInfo = self.Dataset.ClassInformation
             result = copy(data)
@@ -49,7 +53,7 @@ class EmergingPattern(object):
         else:
             classFeature = self.Dataset.ClassInformation.Feature
             featureInformation = self.Dataset.ClassInformation.Distribution
-            print(f"featureInformation: {featureInformation}")
+            #print(f"featureInformation: {featureInformation}")
             result = copy(data)
             for i in range(len(result)):
                 if featureInformation[i] != 0:
@@ -92,6 +96,7 @@ class EmergingPattern(object):
 
 class EmergingPatternCreator(object):
     def __init__(self, dataset):
+        #print("Init EmergingPatternCreator")
         self.Dataset = dataset
         self.__builderForType = {
             CutPointSelector: CutPointBasedBuilder,
@@ -109,32 +114,34 @@ class EmergingPatternCreator(object):
             pattern.Items.append(item)
         return pattern
 
-    def ExtractPatterns(self, treeClassifier, action):
-        print("\nextractt Patternss")
-        print(action)
+    def ExtractPatterns(self, treeClassifier, patternFound):
+        #print("\nextractt Patternss")
+        #print(f"In ExtractPatterns ClassFeature: {self.Dataset.Class}")
+        print(patternFound)
         context = list()
         self.DoExtractPatterns(
-            treeClassifier.DecisionTree.TreeRootNode, context, action)
+            treeClassifier.DecisionTree.TreeRootNode, context, patternFound)
 
-    def DoExtractPatterns(self, node, contexts, action):
-        print("Do Extract Patterns")
+    def DoExtractPatterns(self, node, contexts, patternFound):
+        #print("Do Extract Patterns")
         #print(f"contexts: {contexts}")
         #print(type(node))
         if node.IsLeaf:
             newPattern = self.Create(contexts)
             newPattern.Counts = node.Data
             newPattern.Supports = newPattern.CalculateSupports(node.Data)
-            if action:
-                print("About to invoke in DoExtractPatterns")
-                action(newPattern)
+            if patternFound is not None:
+                #print("About to invoke in DoExtractPatterns")
+                patternFound(newPattern)
         else:
             for index in range(len(node.Children)):
-                context = SelectorContext()
-                context.Index = index
-                context.Selector = node.ChildSelector
+                selectorContext = SelectorContext()
+                selectorContext.Index = index
+                selectorContext.Selector = node.ChildSelector
+                context = selectorContext
 
                 contexts.append(context)
-                self.DoExtractPatterns(node.Children[index], contexts, action)
+                self.DoExtractPatterns(node.Children[index], contexts, patternFound)
                 contexts.remove(context)
 
 

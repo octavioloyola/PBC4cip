@@ -131,9 +131,32 @@ def Evaluate(classes, real, predicted):
             "Cannot evaluate classification. Real and Predicted counts are different.")
     numClasses = len(classes)
 
+    print(f"real: {real}")
+    #print(f"predicted: {predicted}")
     evaluation = CrispAndPartitionEvaluation()
     evaluation.ConfusionMatrix = ConfusionMatrix(classes)
 
+    confusion = [[0] * len(classes) for i in range(len(classes)) ]
+    classified_as = 0
+    error_count = 0
+    for i in range(len(real)):
+        for j in range(len(predicted[i])):
+            if predicted[i][j] > predicted[i][classified_as]:
+                classified_as = j
+        expectedValue = real[i]
+        confusion[expectedValue][classified_as] = confusion[expectedValue][classified_as] + 1
+
+        if (classified_as != expectedValue):
+            error_count = error_count + 1
+        
+    acc = 100.0 * (len(real) - error_count) / len(real)
+    auc = obtainAUCMulticlass(confusion, len(classes))
+        
+    
+    return confusion, acc, auc
+
+
+"""
     for i in range(len(real)):
         expectedValue = real[i]
         classification = predicted[i]
@@ -149,7 +172,10 @@ def Evaluate(classes, real, predicted):
                 evaluation.ConfusionMatrix.Matrix[ArgMax(
                     classification)][expectedValue] += 1
 
-    return evaluation
+        #print(evaluation.ConfusionMatrix)
+"""
+
+    
 
 
 def AddMatrices(cmA, cmB):
@@ -177,3 +203,33 @@ def NormalizeVotes(values):
 
     result[argMax] = 1
     return result
+
+def obtainAUCBinary(tp, tn, fp, fn):
+        nPos = tp +fn
+        nNeg = tn + fp
+        recall = tp / nPos
+        if tp == 0:
+            recall = 0
+        
+        sensibility = tn/ nNeg
+        if tn == 0:
+            sensibility = 0
+        
+        return (recall + sensibility) / 2
+
+def obtainAUCMulticlass(confusion, num_classes):
+    sumVal = 0
+    for i in range(num_classes):
+        tp = confusion[i][i]
+
+        for j in range(i+1, num_classes):
+            fp = confusion[j][i]
+            fn = confusion[i][j]
+            tn = confusion[j][j]
+            sumVal = sumVal + obtainAUCBinary(tp, tn, fp, fn)
+    
+    avg = (sumVal * 2) / (num_classes * (num_classes-1))
+    return avg
+
+    
+

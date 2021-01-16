@@ -14,19 +14,21 @@ from tqdm import tqdm
 
 class PBC4cip:
 
-    def __init__(self, file):
-        self.File = file
+    def __init__(self):
+        #self.File = file
+        self.File = None
         self.miner = None
-        self.Dataset = Dataset(self.File)
+        #self.Dataset = Dataset(self.File)
         #self.Dataset = None
         self.EmergingPatterns = list()
         self.TrainingSample = None
         self.MinimalPatternSupport = None
+        self.ClassNominalFeature = None
         self.NormalizingVector = None
         self.__votesSum = None
         self.__classDistribution = None
     
-    """
+    
     def set_dataset(self, file):
         self.Dataset = Dataset(file)
     
@@ -35,7 +37,6 @@ class PBC4cip:
     
     def del_dataset(self):
         del self.Dataset
-    """
 
     def arg_max (self, source):
         idx = 0
@@ -48,11 +49,14 @@ class PBC4cip:
         
         return idx
 
-    def Training(self, multivariate, filtering, treeCount=None):
+    def Training(self, multivariate, filtering, trainFile, treeCount=None):
         #Sorta like Train inside PBC4cip
         #filtering = False
+        dataset = Dataset(trainFile)
         print(f"Filtering: {filtering}")
-        miner = PatternMinerWithoutFiltering(self.Dataset)
+        print(f"train: {dataset.Instances}")
+        print(f"class: {dataset.Class}")
+        miner = PatternMinerWithoutFiltering(dataset)
         """
         if filtering:
             miner = PatternMiner(self.Dataset)
@@ -105,31 +109,34 @@ class PBC4cip:
         #self.MinimalPatternSupport = 0
 
         #self.ComputeVotes()
+
+        self.ComputeVotes(dataset)
         return self.EmergingPatterns
 
-    def Classification(self, patterns):
+    def Classification(self, patterns, testInstances):
         #print(f"\nPatternsClassify: {patterns}")
         #print(f"typePatterns: {type(patterns)} typeof: {type(patterns[0])}")
         if not patterns or len(patterns) == 0:
             raise Exception(
                 "In order to classify, previously extracted patterns are required.")
 
-        dataset = patterns[0].Dataset
+        train_dataset = patterns[0].Dataset
+        test_dataset = Dataset(testInstances)
 
-        print(f"LenTraining: {len(dataset.Instances)}") #Training
-        print(f"LenTesting: {len(self.Dataset.Instances)}") #Testing
+        print(f"LenTraining: {len(train_dataset.Instances)}") #Training
+        print(f"LenTesting: {len(test_dataset.Instances)}") #Testing
         #print(f"Ex: {self.Dataset.Instances[0]} \n type: {type(self.Dataset.Instances[0])}, len: {len(self.Dataset.Instances[0])}")
 
-        if not dataset:
+        if not train_dataset:
             raise Exception(
                 "In order to classify, training instances are required.")
 
-        if self.Dataset.Relation != dataset.Relation:
+        if test_dataset.Relation != train_dataset.Relation:
             raise Exception(
                 "Patterns are not compatible with current testing dataset.")
 
-        self.EmergingPatterns = patterns
-        self.TrainingSample = dataset.Instances
+        #self.EmergingPatterns = patterns
+        #self.TrainingSample = train_dataset.Instances
         self.MinimalPatternSupport = 0
         
         #My changes here
@@ -137,14 +144,14 @@ class PBC4cip:
         print(f"numPatterns: {numPatterns}")
         patternLength = 0.0
         combinationLength = 0.0
-        numClasses = len(self.Dataset.Class)
+        numClasses = len(test_dataset.Class)
         print(f"numClasses: {numClasses}")
 
-        self.ComputeVotes()
+        #self.ComputeVotes()  Original Place
 
         classification_results = list()
 
-        for instance in tqdm(self.Dataset.Instances, desc=f"Classifying instances for relation {self.Dataset.Relation}", unit="instance", leave=False):
+        for instance in tqdm(test_dataset.Instances, desc=f"Classifying instances for relation {test_dataset.Relation}", unit="instance", leave=False):
             #print("ffsdsd")
             result = self.Classify(instance)
             classification_results.append(result)
@@ -158,7 +165,7 @@ class PBC4cip:
             
             #confusion = []
 
-        real = list(map(lambda instance: self.Dataset.GetFeatureValue(self.Dataset.Class, instance), self.Dataset.Instances))
+        real = list(map(lambda instance: test_dataset.GetFeatureValue(test_dataset.Class, instance), test_dataset.Instances))
         predicted = [self.arg_max(instance) for instance in classification_results]
 
         #confusion, acc, auc = Evaluate(self.Dataset.Class[1], real, predicted)
@@ -167,13 +174,12 @@ class PBC4cip:
         #for prediction in predicted:
             #print(f"prediction: {prediction}")
 
-        return Evaluate(self.Dataset.Class[1], real, predicted)
+        return Evaluate(test_dataset.Class[1], real, predicted)
 
     def Classify(self, instance):
         #print(f"NewInstance")
         #print(f"Enter Classify PBC4cip")
-        classFeature = self.Dataset.Class
-        votes = [0]*len(classFeature[1])
+        votes = [0]*len(self.ClassNominalFeature[1])
         #print(f"lenClassFeat: {len(classFeature[1])}")
 
         for pattern in self.EmergingPatterns:
@@ -205,67 +211,66 @@ class PBC4cip:
         else:
             return self.__classDistribution
             
-
-    def ComputeVotes(self):
+    
+    def ComputeVotes(self, training_dataset):
         #Compute Votes inside PBC4cip
-        #print(f"Enter ComputeVotes")
-        #print(f"trainingSample: {self.TrainingSample}")
+        self.ClassNominalFeature = training_dataset.Class
+        print(f"ClassFeature: {training_dataset.Class}")
         instancesByClass = self.GroupInstancesByClass(
-            self.TrainingSample, self.Dataset.Class)
+            training_dataset)
         self.NormalizingVector = self.ComputeNormalizingVector(
-            instancesByClass)
+            instancesByClass, len(training_dataset.Instances))
         self.__classDistribution = self.ComputeClassDistribution(
-            instancesByClass)
+            instancesByClass,  len(training_dataset.Instances))
 
-        self.__votesSum = [0]*len(self.Dataset.Class[1])
+        self.__votesSum = [0]*len(training_dataset.Class[1])
         for pattern in self.EmergingPatterns:
-            for classValue in range(len(self.Dataset.Class[1])):
+            for classValue in range(len(training_dataset.Class[1])):
                 self.__votesSum[classValue] += pattern.Supports[classValue]
 
-    def GroupInstancesByClass(self, instances, classFeature):
+    def GroupInstancesByClass(self, dataset):
         #print(f"Enter GroupInstancesByClass")
         instancesByClass = list()
-        classIdx = self.Dataset.Model.index(classFeature)
 
-        for classValue in range(len(classFeature[1])):
+        for classValue in range(len(dataset.Class[1])):
             instancesByClass.append(list())
 
-        for instance in instances:
-            instancesByClass[self.Dataset.Class[1].index(
-                instance[classIdx])].append(instance)
+        for instance in dataset.Instances:
+            instancesByClass[dataset.Class[1].index(
+                instance[dataset.GetClassIdx()])].append(instance)
 
         return instancesByClass
 
-    def ComputeNormalizingVector(self, instancesByClass):
+    def ComputeNormalizingVector(self, instancesByClass, instanceCount):
         #print(f"Enter ComputeNormalizing")
-        vetorSum = 0
+        vectorSum = 0
         normalizingVector = [0]*len(instancesByClass)
 
         for classValue in range(len(instancesByClass)):
             try:
                 normalizingVector[classValue] = 1.0 - 1.0 * \
                     len(instancesByClass[classValue]) / \
-                    len(self.TrainingSample)
+                    instanceCount
             except ZeroDivisionError:
                 normalizingVector[classValue] = 0
-            vetorSum += normalizingVector[classValue]
+            vectorSum += normalizingVector[classValue]
 
         for index in range(len(normalizingVector)):
             try:
-                normalizingVector[index] /= vetorSum
+                normalizingVector[index] /= vectorSum
             except ZeroDivisionError:
                 normalizingVector[index] = 0
 
         return normalizingVector
 
-    def ComputeClassDistribution(self, instancesByClass):
+    def ComputeClassDistribution(self, instancesByClass, instanceCount):
         #print(f"Enter EnterComputeClass")
         classDistribution = [0]*len(instancesByClass)
         for classValue in range(len(instancesByClass)):
             try:
                 classDistribution[classValue] = 1.0 * \
                     len(instancesByClass[classValue]) / \
-                    len(self.TrainingSample)
+                    instanceCount
             except ZeroDivisionError:
                 classDistribution[classValue] = 0
 

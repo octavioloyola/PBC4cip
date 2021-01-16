@@ -5,6 +5,8 @@ import argparse
 from tqdm import tqdm, trange
 from core.PBC4cip import PBC4cip
 from core.FileManipulation import WritePatternsBinary, WritePatternsCSV, ReadPatternsBinary, WriteClassificationResults, WriteResultsCSV
+from core.PatternMiner import PatternMiner, PatternMinerWithoutFiltering
+from core.Dataset import Dataset
 from datetime import datetime
 
 
@@ -44,9 +46,9 @@ def Classify(file, outputDirectory, resultsId, delete, suffix=None):
     print("Testing is about to begin")
 
     try:
-        classifier = PBC4cip(file)
+        classifier = PBC4cip()
         patterns = ReadPatternsBinary(file, outputDirectory, delete, suffix)
-        confusion, acc, auc = classifier.Classification(patterns)
+        confusion, acc, auc = classifier.Classification(patterns, testInstances)
         #WriteClassificationResults(confusion, acc, auc, file, outputDirectory, suffix)
         WriteResultsCSV(confusion, acc, auc, len(patterns), file, outputDirectory, resultsId, None)
 
@@ -60,11 +62,10 @@ def Classify(file, outputDirectory, resultsId, delete, suffix=None):
 
 def Train_and_test(trainFile, outputDirectory, treeCount, multivariate, filtering, testFile, resultsId, delete):
     print(f"Train and Test")
-    classifier = PBC4cip(trainFile)
-    patterns = classifier.Training(multivariate, filtering, treeCount)
+    classifier = PBC4cip()
+    patterns = classifier.Training(multivariate, filtering, trainFile, treeCount )
     print(f"Now start testing")
-    classifier_test = PBC4cip(testFile)
-    confusion, acc, auc = classifier_test.Classification(patterns)
+    confusion, acc, auc = classifier.Classification(patterns, testFile)
     print(f"TrainLen: {trainFile} testLen: {testFile}")
     WriteResultsCSV(confusion, acc, auc, len(patterns), testFile, outputDirectory, resultsId, filtering)
 

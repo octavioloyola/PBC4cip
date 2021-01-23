@@ -12,17 +12,51 @@ from core.DistributionTester import PureNodeStopCondition, AlwaysTrue
 
 class DecisionTreeBuilder():
     def __init__(self, dataset):
-        self.MinimalInstanceMembership = 0.05
-        self.MinimalSplitGain = 1e-30
-        self.MinimalObjByLeaf = 2
-        self.MaxDepth = -1
-        self.PruneResult = False
-        self.Dataset = dataset
-        self.FeatureCount = 0
-        self.StopCondition = PureNodeStopCondition
-        self._distributionEvaluator = None
-        self.OnSelectingFeaturesToConsider = None
-        self.SplitIteratorProvider = SplitIteratorProvider(self.Dataset)
+        self.__MinimalInstanceMembership = 0.05
+        self.__MinimalSplitGain = 1e-30
+        self.__MinimalObjByLeaf = 2
+        self.__MaxDepth = -1
+        self.__PruneResult = False
+        self.__Dataset = dataset
+        self.__FeatureCount = 0
+        self.__StopCondition = PureNodeStopCondition
+        self.__distributionEvaluator = None
+        self.__OnSelectingFeaturesToConsider = None
+        self.__SplitIteratorProvider = SplitIteratorProvider(self.Dataset)
+    
+    @property
+    def MinimalInstanceMembership(self):
+        return self.__MinimalInstanceMembership
+    
+    @property
+    def StopCondition(self):
+        return self.__StopCondition
+    
+    @property
+    def MaxDepth(self):
+        return self.__MaxDepth
+    
+    @property
+    def MinimalObjByLeaf(self):
+        return self.__MinimalObjByLeaf
+    
+    @property
+    def SplitIteratorProvider(self):
+        return self.__SplitIteratorProvider
+    
+    @property
+    def MinimalSplitGain(self):
+        return self.__MinimalSplitGain
+    @MinimalSplitGain.setter
+    def MinimalSplitGain(self, new_minimal_split_gain):
+        self.__MinimalSplitGain = new_minimal_split_gain
+
+    @property
+    def Dataset(self):
+        return self.__Dataset
+    @Dataset.setter
+    def Dataset(self, new_dataset):
+        self.__Dataset = new_dataset
     
     @property
     def distributionEvaluator(self):
@@ -51,11 +85,11 @@ class DecisionTreeBuilder():
             filteredObjMembership, self.Dataset.Model, self.Dataset.Class)
 
         result.TreeRootNode = DecisionTreeNode(parentDistribution)
-        self.FillNode(result.TreeRootNode,
+        self.__FillNode(result.TreeRootNode,
                       filteredObjMembership, 0, currentContext)
         return result
 
-    def FillNode(self, node, instanceTuples, level, currentContext):
+    def __FillNode(self, node, instanceTuples, level, currentContext):
         if self.StopCondition(node.Data, self.Dataset.Model, self.Dataset.Class):
             return
         if self.MaxDepth >= 0 and (level >= self.MaxDepth - 1):
@@ -91,7 +125,7 @@ class DecisionTreeBuilder():
                 childNode.Parent = node
                 node.Children.append(childNode)
 
-                self.FillNode(
+                self.__FillNode(
                     childNode, instancesPerChildNode[index], level + 1, currentContext)
 
         return
@@ -151,7 +185,7 @@ class MultivariateDecisionTreeBuilder(DecisionTreeBuilder):
 
         result.TreeRootNode = DecisionTreeNode(parentDistribution)
 
-        self.FillNode(result.TreeRootNode,
+        self.__FillNode(result.TreeRootNode,
                       filteredObjMembership, 0, currentContext)
 
         return result
@@ -232,7 +266,7 @@ class MultivariateDecisionTreeBuilder(DecisionTreeBuilder):
                 childNode.Parent = node
                 node.Children.append(childNode)
 
-                self.FillNode(
+                self.__FillNode(
                     childNode, instancesPerChildNode[index], level + 1, currentContext)
         
 

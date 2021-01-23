@@ -18,11 +18,15 @@ class FilteredCollection(object):
             self.__current = list()
         else:
             self.__current = resultCollection
+    
+    @property
+    def current(self):
+        return self.__current
+    @current.setter
+    def current(self, new_current):
+        self.__current = new_current
 
-    def SetResultCollection(self, current):
-        self.__current = current
-
-    def Add(self, item):
+    def __Add(self, item):
         if (self.__relationToFind != SubsetRelation.Unrelated):
             i = 0
             while i < len(self.__current):
@@ -42,8 +46,4 @@ class FilteredCollection(object):
 
     def AddRange(self, items):
         for item in items:
-            self.Add(item)
-        varitems = self.GetItems()
-
-    def Clear(self):
-        self.__current = list()
+            self.__Add(item)

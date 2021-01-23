@@ -15,12 +15,12 @@ from core.FilteredCollection import FilteredCollection
 class PatternMinerWithoutFiltering:
 
     def __init__(self, treeCount=None, featureCount=None, minePatternsWhileBuildingTree=None):
-        self._dataset = None
-        self.Patterns = list()
-        self.PatternsList = list()
-        self._decisionTreeBuilder = None
-        self.EPTester = AlwaysTrue
-        self.FilterRelation = SubsetRelation.Superset
+        self.__dataset = None
+        self.__Patterns = list()
+        self.__PatternsList = list()
+        self.__decisionTreeBuilder = None
+        self.__EPTester = AlwaysTrue
+        self.__FilterRelation = SubsetRelation.Superset
 
         self.__emergingPatternCreator = None
         self.__emergingPatternComparer = None
@@ -28,35 +28,52 @@ class PatternMinerWithoutFiltering:
         self.__minimal = None
 
         if not featureCount:
-            self.FeatureCount = -1
+            self.__FeatureCount = -1
         else:
-            self.FeatureCount = featureCount
+            self.__FeatureCount = featureCount
 
         if not treeCount:
-            self.TreeCount = 100
+            self.__TreeCount = 100
         else:
-            self.TreeCount = treeCount
+            self.__TreeCount = treeCount
 
         if not minePatternsWhileBuildingTree:
-            self.MinePatternsWhileBuildingTree = False
+            self.__MinePatternsWhileBuildingTree = False
         else:
-            self.MinePatternsWhileBuildingTree = minePatternsWhileBuildingTree
+            self.__MinePatternsWhileBuildingTree = minePatternsWhileBuildingTree
 
     @property
     def dataset(self):
-        return self._dataset
-
+        return self.__dataset
     @dataset.setter
     def dataset(self, new_dataset):
-        self._dataset = new_dataset
+        self.__dataset = new_dataset
     
     @property
     def decisionTreeBuilder(self):
-        return self._decisionTreeBuilder
-    
+        return self.__decisionTreeBuilder
     @decisionTreeBuilder.setter
     def decisionTreeBuilder(self, new_dtb):
-        self._decisionTreeBuilder = new_dtb
+        self.__decisionTreeBuilder = new_dtb
+
+    @property
+    def FeatureCount(self):
+        return self.__FeatureCount
+    @FeatureCount.setter
+    def FeatureCount(self, new_Feature_Count):
+        self.__FeatureCount = new_Feature_Count
+    
+    @property
+    def EPTester(self):
+        return self.__EPTester
+
+    @property
+    def PatternsList(self):
+        return self.__PatternsList
+
+    @PatternsList.setter
+    def PatternsList(self, new_patterns_list):
+        self.__PatternsList = new_patterns_list
 
     def Mine(self):
         self.Patterns = list()
@@ -79,7 +96,7 @@ class PatternMinerWithoutFiltering:
         else:
             featureCount = int(math.log(len(self.dataset.Attributes), 2) + 1)
 
-        decision_tree_builder = self._decisionTreeBuilder
+        decision_tree_builder = self.decisionTreeBuilder
         decision_tree_builder.FeatureCount = featureCount
         decision_tree_builder.OnSelectingFeaturesToConsider = SampleWithoutRepetition
         for i in tqdm(range(self.TreeCount), unit="tree", desc="Building trees and extracting patterns", leave=False):
@@ -91,7 +108,7 @@ class PatternMinerWithoutFiltering:
         return self.PatternsList
 
     def PatternFound(self, pattern):        
-        if self.EPTester(pattern.Counts, self._dataset.Model, self._dataset.Class):
+        if self.EPTester(pattern.Counts, self.dataset.Model, self.dataset.Class):
             simplifiedPattern = self.__emergingPatternSimplifier.Simplify(pattern)
             self.PatternsList.append(simplifiedPattern)
                 

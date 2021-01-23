@@ -4,6 +4,7 @@ import pickle
 import csv
 from tqdm import tqdm
 from io import StringIO, BytesIO
+from core.Evaluation import Evaluate
 import pandas as pd
 
 
@@ -122,7 +123,7 @@ def WritePatternsCSV(patterns, originalFile, outputDirectory, suffix=None):
     return name
 
 
-def WriteClassificationResults(confusion, acc, auc, originalFile, outputDirectory, suffix=None):
+def WriteClassificationResults(evaluation, acc, auc, originalFile, outputDirectory, suffix=None):
     if not evaluation:
         return ""
     if not suffix:

@@ -25,14 +25,42 @@ class SplitIteratorProvider(object):
 
 class SplitIterator(object):
     def __init__(self, dataset, feature):
-        self.Dataset = dataset
-        self.Model = self.Dataset.Model
-        self.Class = self.Dataset.Class
-        self.Feature = feature
-        self.CurrentDistribution = None
-        self._initialized = False
-        self._numClasses = 0
-        self._instances = 0
+        self.__Dataset = dataset
+        self.__Model = self.Dataset.Model
+        self.__Class = self.Dataset.Class
+        self.__Feature = feature
+        self.__CurrentDistribution = None
+        self.__initialized = False
+        self.__numClasses = 0
+        self.__instances = 0
+
+    @property
+    def Dataset(self):
+        return self.__Dataset
+    @Dataset.setter
+    def Dataset(self, new_dataset):
+        self.__Dataset = new_dataset
+    
+    @property
+    def Model(self):
+        return self.__Model
+    @Model.setter
+    def Model(self, new_model):
+        self.__Model = new_model
+    
+    @property
+    def Class(self):
+        return self.__Class
+    @Class.setter
+    def Class(self, new_class):
+        self.__Class = new_class
+    
+    @property
+    def Feature(self):
+        return self.__Feature
+    @Feature.setter
+    def Feature(self, new_feature):
+        self.__Feature = new_feature
 
     def Initialize(self, instances):
         if not self.Model:

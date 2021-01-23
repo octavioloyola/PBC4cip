@@ -16,63 +16,70 @@ class PBC4cip:
 
     def __init__(self, treeCount=None):
         self.File = None
-        self._miner = None
-        self._filterer = None
-        self._multivariate = None
-        self._treeCount = treeCount
-        self._dataset = None
-        self.EmergingPatterns = list()
-        self.TrainingSample = None
-        self.ClassNominalFeature = None
-        self.NormalizingVector = None
+        self.__miner = None
+        self.__filterer = None
+        self.__multivariate = None
+        self.__treeCount = treeCount
+        self.__dataset = None
+        self.__EmergingPatterns = list()
+        self.__class_nominal_feature = None
+        self.__normalizing_vector = None
         self.__votesSum = None
         self.__classDistribution = None
 
     @property
     def dataset(self):
-        return self._dataset
+        return self.__dataset
 
     @dataset.setter
     def dataset(self, new_dataset):
-        self._dataset = new_dataset
+        self.__dataset = new_dataset
 
     @property
     def multivariate(self):
-        return self._multivariate
+        return self.__multivariate
 
     @multivariate.setter
     def multivariate(self, new_multivariate):
-        self._multivariate = new_multivariate
+        self.__multivariate = new_multivariate
     
     @property
     def miner(self):
-        return self._miner
+        return self.__miner
 
     @miner.setter
     def miner(self, new_miner):
-        self._miner = new_miner
+        self.__miner = new_miner
 
     @property
     def filterer(self):
-        return self._filterer
+        return self.__filterer
 
     @filterer.setter
     def filterer(self, new_filterer):
-        self._filterer = new_filterer
+        self.__filterer = new_filterer
+        
+    @property
+    def treeCount(self):
+        return self.__treeCount
+
+    @treeCount.setter
+    def treeCount(self, new_treeCount):
+        self.__treeCount = new_treeCount
 
 
     def fit(self, X, y):
         miner = self.miner
-        miner.TreeCount = self._treeCount
+        miner.TreeCount = self.treeCount
 
         self.EmergingPatterns = miner.Mine()
         if self.filterer is not None:
             self.EmergingPatterns = filterer.Filter(self.EmergingPatterns)
-        self.__ComputeVotes(X, y, self._dataset.Class[1])
+        self.__ComputeVotes(X, y, self.dataset.Class[1])
         return self.EmergingPatterns
 
     def predict(self, instance):
-        votes = [0]*len(self.ClassNominalFeature)
+        votes = [0]*len(self._class_nominal_feature)
 
         for pattern in self.EmergingPatterns:
             if pattern.IsMatch(instance):
@@ -83,7 +90,7 @@ class PBC4cip:
         for i,_ in enumerate(votes):
             try:
                 result[i] = votes[i] * \
-                    self.NormalizingVector[i] / self.__votesSum[i]
+                    self._normalizing_vector[i] / self.__votesSum[i]
             except ZeroDivisionError:
                 result[i] = 0
 
@@ -93,10 +100,10 @@ class PBC4cip:
             return self.__classDistribution
     
     def __ComputeVotes(self, X, y, classes):
-        self.ClassNominalFeature = classes
+        self._class_nominal_feature = classes
         instancesByClass = self.__GroupInstancesByClass(
             X, y, classes)
-        self.NormalizingVector = self.__ComputeNormalizingVector(
+        self._normalizing_vector = self.__ComputeNormalizingVector(
             instancesByClass, len(y))
         self.__classDistribution = self.__ComputeClassDistribution(
             instancesByClass,  len(y))
@@ -112,9 +119,9 @@ class PBC4cip:
         for _ in enumerate(classes):
             instancesByClass.append(list())
 
-        for instance in self._dataset.Instances:
-            instancesByClass[self._dataset.Class[1].index(
-                instance[self._dataset.GetClassIdx()])].append(instance)
+        for instance in self.dataset.Instances:
+            instancesByClass[self.dataset.Class[1].index(
+                instance[self.dataset.GetClassIdx()])].append(instance)
 
         return instancesByClass
 

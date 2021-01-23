@@ -73,7 +73,7 @@ def Train_and_test(X_train, y_train, X_test, y_test, treeCount, multivariate, fi
         miner.decisionTreeBuilder.distributionEvaluator = QuinlanGain
     else:
         miner.decisionTreeBuilder = DecisionTreeBuilder(dataset)
-        miner.decisionTreeBuilder.distributionEvaluator = QuinlanGain
+        miner.decisionTreeBuilder.distributionEvaluator = Hellinger
     classifier.dataset = dataset
     patterns = classifier.fit(X_train, y_train)
     confusion, acc, auc = prediction(X_test, y_test, patterns, classifier, dataset)

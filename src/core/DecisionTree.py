@@ -4,8 +4,12 @@ import math
 class DecisionTree():
 
     def __init__(self, dataset):
-        self.Model = dataset.Model
-        self.TreeRootNode = None
+        self.__Model = dataset.Model
+        self.__TreeRootNode = None
+    
+    @property
+    def Model(self):
+        return self.__Model
 
     @property
     def Size(self):
@@ -16,7 +20,6 @@ class DecisionTree():
 
     @property
     def Leaves(self):
-        print("fff Leaves")
         if self.TreeRootNode is None:
             return 0
         else:
@@ -42,10 +45,21 @@ class DecisionTree():
 class DecisionTreeNode():
 
     def __init__(self, data):
-        self.Data = data
-        self.Parent = None
-        self.ChildSelector = None
-        self.Children = []
+        self.__Data = data
+        self.__Parent = None
+        self.__ChildSelector = None
+        self.__Children = []
+    
+    @property
+    def Data(self):
+        return self.__Data
+    
+    @property
+    def Children(self):
+        return self.__Children
+    @Children.setter
+    def Children(self, new_children):
+        self.__Children = new_children
 
     @property
     def IsLeaf(self):

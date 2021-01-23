@@ -2,10 +2,32 @@ import math
 
 class SingleFeatureSelector(object):
     def __init__(self, dataset, feature):
-        self.ChildrenCount = 2
-        self.Dataset = dataset
-        self.Model = dataset.Model
-        self.Feature = feature
+        self.__ChildrenCount = 2
+        self.__Dataset = dataset
+        self.__Model = dataset.Model
+        self.__Feature = feature
+
+    @property
+    def ChildrenCount(self):
+        return self.__ChildrenCount
+    @ChildrenCount.setter
+    def ChildrenCount(self, new_children_count):
+        self.__ChildrenCount = new_children_count
+    
+    @property
+    def Dataset(self):
+        return self.__Dataset
+    @Dataset.setter
+    def Dataset(self, new_dataset):
+        self.__Dataset = new_dataset
+
+    @property
+    def Feature(self):
+        return self.__Feature
+    @Feature.setter
+    def Feature(self, new_feature):
+        self.__Feature = new_feature
+
 
     def Select(self, instance):
         if self.Dataset.IsMissing(self.Feature, instance):
@@ -21,7 +43,7 @@ class SingleFeatureSelector(object):
 class CutPointSelector(SingleFeatureSelector):
     def __init__(self, dataset, feature):
         super().__init__(dataset, feature)
-        self.CutPoint = None
+        self.__CutPoint = None
 
     def Select(self, instance):
         super().Select(instance)
@@ -45,7 +67,7 @@ class CutPointSelector(SingleFeatureSelector):
 class MultipleValuesSelector(SingleFeatureSelector):
     def __init__(self, dataset, feature):
         super().__init__(dataset, feature)
-        self.Values = []
+        self.__Values = []
 
     def Select(self, instance):
         super().Select(instance)
@@ -69,7 +91,7 @@ class MultipleValuesSelector(SingleFeatureSelector):
 class ValueAndComplementSelector(SingleFeatureSelector):
     def __init__(self, dataset, feature):
         super().__init__(dataset, feature)
-        self.Value = None
+        self.__Value = None
 
     def Select(self, instance):
         super().Select(instance)
@@ -113,8 +135,8 @@ class MultipleFeaturesSelector(object):
 class MultivariateCutPointSelector(MultipleFeaturesSelector):
     def __init__(self, dataset, feature):
         super().__init__(dataset, feature)
-        self.CutPoint = None
-        self.Weights = None
+        self.__CutPoint = None
+        self.__Weights = None
 
     def Select(self, instance):
         super().Select(instance)

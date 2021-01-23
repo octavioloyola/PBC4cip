@@ -35,7 +35,7 @@ def MultiClassHellinger(parent, children):
 
     try:
         for i in range(len(parent)):
-            tn = SumDifferent(parent, i)
+            tn = __SumDifferent(parent, i)
 
             if parent[i] == 0.0:
                 if children[0][i] == 0.0:
@@ -43,7 +43,7 @@ def MultiClassHellinger(parent, children):
                 else: s1p = float('inf')
             else: s1p = math.sqrt(children[0][i] / parent[i])
 
-            s1nA = SumDifferent(children[0], i)
+            s1nA = __SumDifferent(children[0], i)
 
             if (tn == 0.0):
                 if s1nA == 0.0:
@@ -58,7 +58,7 @@ def MultiClassHellinger(parent, children):
                 else: s2p = float('inf')
             else: s2p = math.sqrt(children[1][i] / parent[i])
 
-            s2nA = SumDifferent(children[1], i)
+            s2nA = __SumDifferent(children[1], i)
             if (tn == 0.0):
                 if s2nA == 0.0:
                     s2n = float('nan')
@@ -79,26 +79,26 @@ def MultiClassHellinger(parent, children):
     return math.sqrt(hellinger)
 
 def QuinlanGain (parent, children):
-    result = GetImpurity(parent)
+    result = __GetImpurity(parent)
     total = sum(parent)
     nonMissing = 0.0
 
     for distribution in children:
         childCount = sum(distribution)
         nonMissing += childCount
-        result -= GetImpurity(distribution) * (childCount * 1.0 / total)
+        result -= __GetImpurity(distribution) * (childCount * 1.0 / total)
 
     return result * (nonMissing) / total 
 
 
-def SumDifferent(vector, index):
+def __SumDifferent(vector, index):
     sumValue = 0
     for i in range(len(vector)):
         if index != i:
             sumValue += vector[i]
     return sumValue
 
-def GetImpurity (distribution) :
+def __GetImpurity (distribution) :
     result = 0
     count = sum(distribution)
 

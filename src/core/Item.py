@@ -15,8 +15,22 @@ class SubsetRelation(object):
 class Item(object):
 
     def __init__(self, dataset, feature):
-        self.Dataset = dataset
-        self.Feature = feature
+        self.__Dataset = dataset
+        self.__Feature = feature
+    
+    @property
+    def Dataset(self):
+        return self.__Dataset
+    @Dataset.setter
+    def Dataset(self, new_dataset):
+        self.__Dataset = new_dataset
+    
+    @property
+    def Feature(self):
+        return self.__Feature
+    @Feature.setter
+    def Feature(self, new_feature):
+        self.__Feature = new_feature
 
     def IsMatch(self, instance):
         return False

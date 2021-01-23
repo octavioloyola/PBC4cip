@@ -5,9 +5,14 @@ from tqdm import tqdm
 
 class MaximalPatternsGlobalFilter(object):
     def __init__(self):
-       self.comparer = EmergingPatternComparer(ItemComparer)
-       self.counter = 0 
+       self.__comparer = EmergingPatternComparer(ItemComparer)
 
+    @property
+    def comparer(self):
+        return self.__comparer
+    @comparer.setter
+    def comparer(self, new_comparer):
+        self.__comparer = new_comparer
 
     def Filter(self, patterns):
         selected_patterns = set()
@@ -15,7 +20,6 @@ class MaximalPatternsGlobalFilter(object):
         for candidate_pattern in tqdm(patterns, desc=f"Filtering the found patterns", unit="candidate_pattern", leave=False ):
             minimal_patterns = set()
             general_pattern_found = False
-            self.counter = self.counter +1
 
             for selected_pattern in selected_patterns:
                 pattern_relation = self.comparer.Compare(candidate_pattern, selected_pattern)

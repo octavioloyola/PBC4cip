@@ -10,15 +10,50 @@ from collections import OrderedDict
 
 class EmergingPattern(object):
     def __init__(self, dataset, items=None):
-        self.Dataset = dataset
-        self.Model = self.Dataset.Model
-        self.Items = None
+        self.__Dataset = dataset
+        self.__Model = self.Dataset.Model
+        self.__Items = None
         if not items:
             self.Items = list()
         else:
             self.Items = items
-        self.Counts = []
-        self.Supports = []
+        self.__Counts = []
+        self.__Supports = []
+    
+    @property
+    def Dataset(self):
+        return self.__Dataset
+    @Dataset.setter
+    def Dataset(self, new_dataset):
+        self.__Dataset = new_dataset
+    
+    @property
+    def Model(self):
+        return self.__Model
+    @Model.setter
+    def Model(self, new_model):
+        self.__Model = new_model
+
+    @property
+    def Items(self):
+        return self.__Items
+    @Items.setter
+    def Items(self, new_items):
+        self.__Items = new_items
+    
+    @property
+    def Counts(self):
+        return self.__Counts
+    @Counts.setter
+    def Counts(self, new_counts):
+        self.__Counts = new_counts
+    
+    @property
+    def Supports(self):
+        return self.__Supports
+    @Supports.setter
+    def Supports(self, new_supports):
+        self.__Supports = new_supports
 
     def IsMatch(self, instance):
         for item in self.Items:
@@ -26,7 +61,7 @@ class EmergingPattern(object):
                 return False
         return True
 
-    def UpdateCountsAndSupport(self, instances):
+    def __UpdateCountsAndSupport(self, instances):
         matchesCount = [0]*len(self.Dataset.Class[1])
 
         for instance in instances:
@@ -57,7 +92,7 @@ class EmergingPattern(object):
             return result
                 
 
-    def Clone(self):
+    def __Clone(self):
 
         result = EmergingPattern(self.Dataset, self.Items)
         result.Counts = copy(self.Counts)
@@ -67,14 +102,14 @@ class EmergingPattern(object):
     def __repr__(self):
         return self.BaseRepresentation() + " " + self.SupportInfo()
 
-    def BaseRepresentation(self):
+    def __BaseRepresentation(self):
         return ' AND '.join(map(lambda item: item.__repr__(), self.Items))
 
     def SupportInfo(self):
         return ' '.join(map(lambda count, support: f"{str(count)} [{str(round(support,2))}]", self.Counts, self.Supports))
 
     def ToString(self):
-        dictOfPatterns = {"Pattern": self.BaseRepresentation()}
+        dictOfPatterns = {"Pattern": self.__BaseRepresentation()}
 
         dictOfClasses = {self.Dataset.Class[1][i]+" Count": self.Counts[i]
                          for i in range(0, len(self.Dataset.Class[1]))}
@@ -90,15 +125,22 @@ class EmergingPattern(object):
 
 class EmergingPatternCreator(object):
     def __init__(self, dataset):
-        self.Dataset = dataset
+        self.__Dataset = dataset
         self.__builderForType = {
             CutPointSelector: CutPointBasedBuilder,
             MultipleValuesSelector: MultipleValuesBasedBuilder,
             ValueAndComplementSelector: ValueAndComplementBasedBuilder,
             MultivariateCutPointSelector: MultivariateCutPointBasedBuilder
         }
+    
+    @property
+    def Dataset(self):
+        return self.__Dataset
+    @Dataset.setter
+    def Dataset(self, new_dataset):
+        self.__Dataset = new_dataset
 
-    def Create(self, contexts):
+    def __Create(self, contexts):
         pattern = EmergingPattern(self.Dataset)
         for context in contexts:
             childSelector = context.Selector
@@ -109,12 +151,12 @@ class EmergingPatternCreator(object):
 
     def ExtractPatterns(self, treeClassifier, patternFound):
         context = list()
-        self.DoExtractPatterns(
+        self.__DoExtractPatterns(
             treeClassifier.DecisionTree.TreeRootNode, context, patternFound)
 
-    def DoExtractPatterns(self, node, contexts, patternFound):
+    def __DoExtractPatterns(self, node, contexts, patternFound):
         if node.IsLeaf:
-            newPattern = self.Create(contexts)
+            newPattern = self.__Create(contexts)
             newPattern.Counts = node.Data
             newPattern.Supports = newPattern.CalculateSupports(node.Data)
             if patternFound is not None:
@@ -127,13 +169,19 @@ class EmergingPatternCreator(object):
                 context = selectorContext
 
                 contexts.append(context)
-                self.DoExtractPatterns(node.Children[index], contexts, patternFound)
+                self.__DoExtractPatterns(node.Children[index], contexts, patternFound)
                 contexts.remove(context)
 
 
 class EmergingPatternComparer(object):
     def __init__(self, itemComparer):
-        self.Comparer = itemComparer
+        self.__Comparer = itemComparer
+    @property
+    def Comparer(self):
+        return self.__Comparer
+    @Comparer.setter
+    def Comparer(self, new_comparer):
+        self.__Comparer = new_comparer
 
     def Compare(self, leftPattern, rightPattern):
         directSubset = self.IsSubset(leftPattern, rightPattern)
@@ -172,6 +220,6 @@ class EmergingPatternSimplifier(object):
         resultPattern = EmergingPattern(pattern.Dataset)
         resultPattern.Counts = copy(pattern.Counts)
         resultPattern.Supports = copy(pattern.Supports)
-        self.__collection.SetResultCollection(resultPattern.Items)
+        self.__collection.current = resultPattern.Items
         self.__collection.AddRange(pattern.Items)
         return resultPattern

@@ -131,7 +131,7 @@ def Evaluate(classes, real, predicted):
         confusion[real[i]][predicted[i]] = confusion[real[i]][predicted[i]] + 1
 
     acc = 100.0 * (len(real) - error_count) / len(real)
-    auc = obtainAUCMulticlass(confusion, len(classes))
+    auc = __obtainAUCMulticlass(confusion, len(classes))
         
     
     return confusion, acc, auc
@@ -162,7 +162,7 @@ def NormalizeVotes(values):
     result[argMax] = 1
     return result
 
-def obtainAUCBinary(tp, tn, fp, fn):
+def __obtainAUCBinary(tp, tn, fp, fn):
         nPos = tp +fn
         nNeg = tn + fp
         recall = tp / nPos
@@ -175,7 +175,7 @@ def obtainAUCBinary(tp, tn, fp, fn):
         
         return (recall + sensibility) / 2
 
-def obtainAUCMulticlass(confusion, num_classes):
+def __obtainAUCMulticlass(confusion, num_classes):
     sumVal = 0
     for i in range(num_classes):
         tp = confusion[i][i]
@@ -184,7 +184,7 @@ def obtainAUCMulticlass(confusion, num_classes):
             fp = confusion[j][i]
             fn = confusion[i][j]
             tn = confusion[j][j]
-            sumVal = sumVal + obtainAUCBinary(tp, tn, fp, fn)
+            sumVal = sumVal + __obtainAUCBinary(tp, tn, fp, fn)
     
     avg = (sumVal * 2) / (num_classes * (num_classes-1))
     return avg

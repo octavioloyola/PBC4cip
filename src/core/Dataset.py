@@ -3,16 +3,14 @@ import random
 import math
 import pandas as pd
 import sys
-from core.FileManipulation import ReadARFF, ReadDAT
+from core.FileManipulation import ReadARFF, ReadDAT, GetFromFile
 
 
 class Dataset(object):
 
     def __init__(self, file):
-        # region ARFF/DAT file handling
         arffFile = GetFromFile(file)
 
-        # Check for class attribute before starting
         attributes = arffFile['attributes']
         if not list(filter(lambda attr: attr[0].strip().lower() == 'class', attributes)):
             raise Exception(
@@ -25,6 +23,8 @@ class Dataset(object):
         self.Instances = pd.DataFrame.from_records(
             arffFile['data'], columns=list(
                 map(lambda attribute: attribute[0], self.Model))).values
+
+        self.Features = None
 
     @property
     def Attributes(self):
@@ -45,10 +45,7 @@ class Dataset(object):
     def ClassInformation(self):
         return FeatureInformation(self, self.Class)
 
-    # region Attribute handling
-
     def GetAttribute(self, attribute):
-        #print(f"GetAttribute: {list(filter(lambda attr: attr[0] == attribute, self.Model))}")
         return list(filter(lambda attr: attr[0] == attribute, self.Model))[0]
 
     def GetAttributeNames(self):
@@ -100,6 +97,9 @@ class Dataset(object):
         else:
             raise Exception(
                 "Attribute must be either nominal, numeric, real or integer")
+    
+    def GetClassValue(self, y_instance):
+        return self.GetIndexOfValue(self.Class[0], y_instance[0])
 
     def IsMissing(self, feature, instance):
         value = self.GetFeatureValue(feature, instance)
@@ -108,8 +108,6 @@ class Dataset(object):
             return value < 0
         else:
             return (not value or value == math.nan)
-
-    # endregion
 
     def ScalarProjection(self, instance, features, weights):
 
@@ -120,7 +118,6 @@ class Dataset(object):
                       for feature in features])
 
         return result
-
 
 class FeatureInformation(object):
     def __init__(self, dataset, feature):
@@ -166,16 +163,3 @@ class FeatureInformation(object):
                 self.MinValue = 0
                 self.MaxValue = 0
 
-
-def GetFromFile(file):
-    if os.path.isfile(file):
-        filename, file_extension = os.path.splitext(file)
-        if file_extension == ".arff":
-            return ReadARFF(file)
-        elif file_extension == ".dat":
-            return ReadDAT(file)
-        else:
-            raise Exception(
-                f"Extension '{file_extension}' of file '{filename}' is not supported ")
-    else:
-        raise Exception(f"File: {file} is not valid")

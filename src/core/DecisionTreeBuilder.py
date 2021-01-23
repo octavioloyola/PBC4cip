@@ -3,13 +3,15 @@ import random
 from core.DecisionTree import DecisionTree, DecisionTreeNode
 from core.WinningSplitSelector import WinningSplitSelector
 from core.SplitIterator import SplitIterator
-from core.Helpers import CreateMembershipTuple, FindDistribution
+from core.Helpers import CreateMembershipTupleList, FindDistribution
 from core.SplitIterator import SplitIteratorProvider, MultivariateSplitIteratorProvider
 from core.ForwardFeatureIterator import ForwardFeatureIterator
+from core.DistributionTester import PureNodeStopCondition, AlwaysTrue
+
 
 
 class DecisionTreeBuilder():
-    def __init__(self, dataset, pruneResult=None):
+    def __init__(self, dataset):
         self.MinimalInstanceMembership = 0.05
         self.MinimalSplitGain = 1e-30
         self.MinimalObjByLeaf = 2
@@ -17,84 +19,66 @@ class DecisionTreeBuilder():
         self.PruneResult = False
         self.Dataset = dataset
         self.FeatureCount = 0
-        self.StopCondition = None
-        self.DistributionEvaluator = None
+        self.StopCondition = PureNodeStopCondition
+        self._distributionEvaluator = None
         self.OnSelectingFeaturesToConsider = None
         self.SplitIteratorProvider = SplitIteratorProvider(self.Dataset)
+    
+    @property
+    def distributionEvaluator(self):
+        return self._distributionEvaluator
+
+    @distributionEvaluator.setter
+    def distributionEvaluator(self, new_distributionEvaluator):
+        self._distributionEvaluator = new_distributionEvaluator
 
     def Build(self):
-        #print("Enter build in DTB")
         if self.MinimalSplitGain <= 0:
+            print(f"MinimalSplitGain err in Build UniVariate")
             self.MinimalSplitGain = 1e-30
 
-        #print(f"MinimalSplitGain{self.MinimalSplitGain}")
         currentContext = []
 
-        #print(f"model: {self.Dataset.Model}")
 
-        objectMebership = CreateMembershipTuple(self.Dataset.Instances)
-        #print(f"objectMebership: {objectMebership}")
+        objectMebership = CreateMembershipTupleList(self.Dataset.Instances)
         classFeature = self.Dataset.Class
-
         result = DecisionTree(self.Dataset)
 
-        filteredObjMembership = tuple(
+        filteredObjMembership = list(
             filter(lambda x: x[1] >= self.MinimalInstanceMembership, objectMebership))
-        #print(f"filteredObj: {len(filteredObjMembership)}")
-        #print(f"tuples[0]: {filteredObjMembership[0]}")
-        #print(f"tuples[50]: {filteredObjMembership[50]}")
-        #print(f"tuples[134]: {filteredObjMembership[134]}")
 
         parentDistribution = FindDistribution(
             filteredObjMembership, self.Dataset.Model, self.Dataset.Class)
-        #print(f"parentDistribution: {parentDistribution}" )
 
-        result.TreeRootNode = DecisionTreeNode()
-        result.TreeRootNode.Data = parentDistribution
-        #print("About to fill Node")
+        result.TreeRootNode = DecisionTreeNode(parentDistribution)
         self.FillNode(result.TreeRootNode,
                       filteredObjMembership, 0, currentContext)
         return result
 
-    #
     def FillNode(self, node, instanceTuples, level, currentContext):
-        #print("nodes to Fill")
         if self.StopCondition(node.Data, self.Dataset.Model, self.Dataset.Class):
-            #print("Return due to Stop Condition")
             return
         if self.MaxDepth >= 0 and (level >= self.MaxDepth - 1):
-            #print("Return due to Max Depth")
             return
         if sum(node.Data) <= self.MinimalObjByLeaf:
-            #print("Return due to MinimalObjByLeaf")
             return
         
-
         whichBetterToFind = 1
         winningSplitSelector = WinningSplitSelector(whichBetterToFind)
-        #currentGain = 0
-
+        
         sampleFeatures = self.OnSelectingFeaturesToConsider(
             list(map(lambda attribute: attribute[0], self.Dataset.Attributes)), self.FeatureCount)
-        #print(f"SampleFeatures {sampleFeatures} and self.Dataset.Class[0]: {self.Dataset.Class}")
-        #print(f"sampleFeatures: {sampleFeatures}")
 
         for feature in sampleFeatures:
-            #print(f"\nsampleFeature {feature}")
-            #print(f"classFeature {self.Dataset.Class[0]}, type is {type(self.Dataset.Class)}")
             if feature != self.Dataset.Class[0]:
                 splitIterator = self.SplitIteratorProvider.GetSplitIterator(feature)
                 splitIterator.Initialize(instanceTuples)
-                #print(f"splitIterator._instances: {splitIterator._instances}")
                 while splitIterator.FindNext():
-                    #print(f"DecisionTreeBuilder: node.Data {node.Data}  currDistribution: {splitIterator.CurrentDistribution}")
-                    currentGain = self.DistributionEvaluator(
+                    currentGain = self._distributionEvaluator(
                         node.Data, splitIterator.CurrentDistribution)
-                    #print(f"currentGainUni {currentGain}")
                     if currentGain >= self.MinimalSplitGain:
                         winningSplitSelector.EvaluateThis(
-                            currentGain, splitIterator, level) #currentGain y splitIterator es iwal
-        #print(f"WinningSplitSelector {winningSplitSelector.List} \n\n")
+                            currentGain, splitIterator, level)
         if winningSplitSelector.IsWinner():
             maxSelector = winningSplitSelector.WinningSelector
             node.ChildSelector = maxSelector
@@ -102,24 +86,18 @@ class DecisionTreeBuilder():
             instancesPerChildNode = CreateChildrenInstances(
                 instanceTuples, maxSelector, self.MinimalInstanceMembership)
 
-            #print(f"childrenCount {maxSelector.ChildrenCount}")
             for index in range(maxSelector.ChildrenCount):
-                childNode = DecisionTreeNode()
+                childNode = DecisionTreeNode(winningSplitSelector.WinningDistribution[index])
                 childNode.Parent = node
                 node.Children.append(childNode)
-                childNode.Data = winningSplitSelector.WinningDistribution[index]
 
                 self.FillNode(
                     childNode, instancesPerChildNode[index], level + 1, currentContext)
 
-        #print(f"WinningSplitSelectorDistribution: {winningSplitSelector.WinningSelectorList}")
-        #print(f"WinningSplit: {winningSplitSelector.List}")
         return
 
 
-def CreateChildrenInstances(instances, selector, threshold=None):
-    if not threshold:
-        threshold = 0
+def CreateChildrenInstances(instances, selector, threshold):
 
     result = list()
     for child in range(selector.ChildrenCount):
@@ -127,7 +105,7 @@ def CreateChildrenInstances(instances, selector, threshold=None):
 
     for instance in instances:
         selection = selector.Select(instance[0])
-        if selection:
+        if selection is not None:
             for index in range(len(selection)):
                 if selection[index] > 0:
                     newMembership = selection[index] * instance[1]
@@ -146,8 +124,8 @@ class SelectorContext():
 
 
 class MultivariateDecisionTreeBuilder(DecisionTreeBuilder):
-    def __init__(self, dataset, pruneResult=None):
-        super().__init__(dataset, pruneResult)
+    def __init__(self, dataset):
+        super().__init__(dataset)
         self.MinimalForwardGain = 0
         self.WMin = 0  # Minimal absolute value for each weight after normalizing
         self.SplitIteratorProvider = MultivariateSplitIteratorProvider(
@@ -157,52 +135,43 @@ class MultivariateDecisionTreeBuilder(DecisionTreeBuilder):
         if self.MinimalSplitGain <= 0:
             self.MinimalSplitGain = 1e-30
 
-        #print(f"MinimalSplitGain: { self.MinimalSplitGain }")
         currentContext = []
 
-        objectMebership = CreateMembershipTuple(self.Dataset.Instances)
+        objectMebership = CreateMembershipTupleList(self.Dataset.Instances)
         classFeature = self.Dataset.Class
 
         result = DecisionTree(self.Dataset)
 
-        filteredObjMembership = tuple(
+        filteredObjMembership = list(
             filter(lambda x: x[1] >= self.MinimalInstanceMembership, objectMebership))
-
+        
         parentDistribution = FindDistribution(
             filteredObjMembership, self.Dataset.Model, self.Dataset.Class)
+        print(f"ParentDist: {parentDistribution}")
 
-        result.TreeRootNode = DecisionTreeNode()
-        result.TreeRootNode.Data = parentDistribution
+        result.TreeRootNode = DecisionTreeNode(parentDistribution)
 
-        print("About to Fill Node")
         self.FillNode(result.TreeRootNode,
                       filteredObjMembership, 0, currentContext)
 
         return result
 
-    #
     def FillNode(self, node, instanceTuples, level, currentContext):
-        print("Nodes to fillMult")
         if self.StopCondition(node.Data, self.Dataset.Model, self.Dataset.Class):
-            print("return a")
             return
         if self.MaxDepth >= 0 and level >= self.MaxDepth - 1:
-            print("return b")
             return
         if sum(node.Data) <= self.MinimalObjByLeaf:
-            print("return c")
             return
 
         whichBetterToFind = 1
         winningSplitSelector = WinningSplitSelector(whichBetterToFind)
         currentGain = 0
-
         sampleFeatures = self.OnSelectingFeaturesToConsider(
             list(map(lambda attribute: attribute[0], self.Dataset.Attributes)), self.FeatureCount)
 
         bestFeature = None
 
-        print(f"sampleFeatures: {sampleFeatures}")
         for feature in sampleFeatures:
             splitIterator = self.SplitIteratorProvider.GetSplitIterator(
                 feature)
@@ -210,15 +179,12 @@ class MultivariateDecisionTreeBuilder(DecisionTreeBuilder):
                 raise Exception(f"Undefined iterator for feature {feature}")
             splitIterator.Initialize(instanceTuples)
             while splitIterator.FindNext():
-                currentGain = self.DistributionEvaluator(
-                    node.Data, splitIterator.CurrentDistribution)
-                #print(f"currentGainMulti: " + currentGain)
+                currentGain = self._distributionEvaluator(node.Data, splitIterator.CurrentDistribution)
                 if currentGain >= self.MinimalSplitGain:
                     if winningSplitSelector.EvaluateThis(
                             currentGain, splitIterator, level):
                         bestFeature = self.Dataset.GetAttribute(feature)
 
-        # Forward feature selection
 
         if bestFeature is not None and not self.Dataset.IsNominalFeature(bestFeature):
             sampleFeatures = list(filter(lambda feature: not self.Dataset.IsNominalFeature(
@@ -244,7 +210,7 @@ class MultivariateDecisionTreeBuilder(DecisionTreeBuilder):
                         break
 
                     while splitIterator.FindNext():
-                        currentGain = self.DistributionEvaluator(
+                        currentGain = self._distributionEvaluator(
                             node.Data, splitIterator.CurrentDistribution)
                         if currentGain >= self.MinimalSplitGain and (currentGain - winningSplitSelector.MinStoredValue) >= self.MinimalForwardGain:
                             if winningSplitSelector.EvaluateThis(currentGain, splitIterator, level):
@@ -254,9 +220,6 @@ class MultivariateDecisionTreeBuilder(DecisionTreeBuilder):
                 else:
                     featureIterator.Add(bestFeature)
 
-        print(f"WinningSplitSelectorLen: {len(winningSplitSelector)}")
-        print("vvvv")
-        print(f"WinningSplitSelector {winningSplitSelector.List}")
         if winningSplitSelector.IsWinner():
             maxSelector = winningSplitSelector.WinningSelector
             node.ChildSelector = maxSelector
@@ -265,14 +228,12 @@ class MultivariateDecisionTreeBuilder(DecisionTreeBuilder):
                 instanceTuples, maxSelector, self.MinimalInstanceMembership)
 
             for index in range(maxSelector.ChildrenCount):
-                childNode = DecisionTreeNode()
+                childNode = DecisionTreeNode(winningSplitSelector.WinningDistribution[index])
                 childNode.Parent = node
-                childNode.Data = winningSplitSelector.WinningDistribution[index]
                 node.Children.append(childNode)
 
                 self.FillNode(
                     childNode, instancesPerChildNode[index], level + 1, currentContext)
         
-        print(f"WinningSplitSelectorDistribution: {winningSplitSelector.WinningDistribution}")
 
         return

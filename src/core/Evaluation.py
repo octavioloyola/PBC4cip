@@ -1,14 +1,3 @@
-#
-#       Example of Confusion Matrix
-#
-#                      Actual
-# Predicted       |  P  |  N  |
-#               P |  0  |  5  |
-#               N |  1  |  0  |
-#               U |  5  |  1  | <- The last row correspond to the abstentions
-#
-#
-#
 import math
 import copy
 from core.Helpers import ArgMax
@@ -130,26 +119,11 @@ def Evaluate(classes, real, predicted):
         raise Exception(
             "Cannot evaluate classification. Real and Predicted counts are different.")
     numClasses = len(classes)
-
-    print(f"real: {real}\n")
-    print(f"predicted: {predicted}")
     evaluation = CrispAndPartitionEvaluation()
     evaluation.ConfusionMatrix = ConfusionMatrix(classes)
-
-    confusion = [[0]*2 for i in range(2)]
+    confusion = [[0]*2 for i in enumerate(classes)]
     classified_as = 0
     error_count = 0
-    """
-    for i in range(len(real)):
-        for j in range(len(predicted[i])):
-            if predicted[i][j] > predicted[i][classified_as]:
-                classified_as = j
-        expectedValue = real[i]
-        confusion[expectedValue][classified_as] = confusion[expectedValue][classified_as] + 1
-
-        if (classified_as != expectedValue):
-            error_count = error_count + 1
-    """
 
     for i in range(len(real)):
         if real[i] != predicted[i]:
@@ -161,29 +135,6 @@ def Evaluate(classes, real, predicted):
         
     
     return confusion, acc, auc
-
-
-"""
-    for i in range(len(real)):
-        expectedValue = real[i]
-        classification = predicted[i]
-
-        if not classification:
-            evaluation.ConfusionMatrix.Matrix[numClasses][expectedValue] += 1
-        else:
-            classification = NormalizeVotes(classification)
-            votes = sum(classification)
-            if votes == 0:
-                evaluation.ConfusionMatrix.Matrix[numClasses][expectedValue] += 1
-            else:
-                evaluation.ConfusionMatrix.Matrix[ArgMax(
-                    classification)][expectedValue] += 1
-
-        #print(evaluation.ConfusionMatrix)
-"""
-
-    
-
 
 def AddMatrices(cmA, cmB):
     if not cmA:

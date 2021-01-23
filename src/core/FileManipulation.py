@@ -4,6 +4,7 @@ import pickle
 import csv
 from tqdm import tqdm
 from io import StringIO, BytesIO
+import pandas as pd
 
 
 def ReadARFF(file):
@@ -13,10 +14,7 @@ def ReadARFF(file):
 def ReadAndDeleteARFF(file):
     dataset = ReadARFF(file)
     if os.path.exists(file):
-        # We should check if file exists or not not before deleting them
-        #print(f"File Does Exist")
         os.remove(file)
-        #print(f"File got removed")
     else:
         print(f"Can not delete the file '{file}' as it doesn't exists")
     return dataset
@@ -39,7 +37,6 @@ def ReadDAT(file):
                         newline = newline.split(
                         )[0]+' '+newline.split()[1]+' '+newline.split()[2]+'\n'
                 new_file.write(newline)
-    #print(f"Is it closed? {new_file.closed}")
     return ReadAndDeleteARFF(new_f)
 
 
@@ -55,25 +52,13 @@ def ReadPatternsBinary(originalFile, outputDirectory, delete, suffix=None):
 
     if os.path.exists(name):
         input_file = open(name, "rb")
-        #dataset = pickle.load(input_file)
         patternCount = pickle.load(input_file)
-        # Read the data
         for pattern in tqdm(range(patternCount), desc=f"Reading patterns from {name}", unit="pat", leave=False):
             try:
                 pattern_in = pickle.load(input_file)
-                #pattern_in.Dataset = dataset
-                #pattern_in.Model = dataset.Model
                 patterns.append(pattern_in)
             except EOFError:
                 break
-        # while True:
-        #     try:
-        #         pattern_in = pickle.load(input_file)
-        #         patterns.append(pattern_in)
-        #     except EOFError:
-        #         break
-        #if delete:
-            #os.remove(name)
     else:
         raise Exception(
             f"File '{name}'' not found! Please extract patterns first!")
@@ -126,11 +111,11 @@ def WritePatternsCSV(patterns, originalFile, outputDirectory, suffix=None):
         os.remove(name)
 
     patterns_out = open(name, "w", newline='\n', encoding='utf-8')
-    fields = list(patterns[0].ToDictionary().keys())
+    fields = list(patterns[0].ToString().keys())
     pattern_writer = csv.DictWriter(patterns_out, fieldnames=fields)
     pattern_writer.writeheader()
     for pattern in tqdm(patterns, desc=f"{action} patterns to {name}...", unit="pattern", leave=False):
-        pattern_writer.writerow(pattern.ToDictionary())
+        pattern_writer.writerow(pattern.ToString())
 
     patterns_out.close()
 
@@ -176,8 +161,6 @@ def WriteClassificationResults(confusion, acc, auc, originalFile, outputDirector
 
 
 def WriteResultsCSV(confusion, acc, auc, numPatterns, originalFile, outputDirectory, resultsId, filtering):
-    #if not evaluation:
-        #return ""
     if not os.path.exists(outputDirectory):
         print(f"Creating output directory: {outputDirectory}")
         os.makedirs(outputDirectory)
@@ -193,7 +176,6 @@ def WriteResultsCSV(confusion, acc, auc, numPatterns, originalFile, outputDirect
         results_out = open(name, "w+", newline='\n', encoding='utf-8')
         results_out.write(f"File,AUC,ACC,NumPatterns,Filtering\n")
 
-    #auc = evaluation.ConfusionMatrix.AUCMeasure(0)
 
     results_out.write(f"{datasetName},{str(auc)}, {str(acc)}, {str(numPatterns)}, {str(filtering)}\n")
 
@@ -201,4 +183,26 @@ def WriteResultsCSV(confusion, acc, auc, numPatterns, originalFile, outputDirect
 
     return name
 
-#Good Version
+def GetFromFile(file):
+    if os.path.isfile(file):
+        filename, file_extension = os.path.splitext(file)
+        if file_extension == ".arff":
+            return ReadARFF(file)
+        elif file_extension == ".dat":
+            return ReadDAT(file)
+        else:
+            raise Exception(
+                f"Extension '{file_extension}' of file '{filename}' is not supported ")
+    else:
+        raise Exception(f"File: {file} is not valid")
+
+def returnX_y(file):
+        arff_file = GetFromFile(file)
+        instances = pd.DataFrame.from_records(
+            arff_file['data'], columns=list(
+                map(lambda attribute: attribute[0], arff_file['attributes'])
+            )
+        ).values
+        X = instances[:, 0:len(instances[0])-1]
+        y = instances[:, len(instances[0])-1 : len(instances[0])]
+        return X,y

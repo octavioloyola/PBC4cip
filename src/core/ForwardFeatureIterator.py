@@ -22,7 +22,7 @@ class ForwardFeatureIterator(object):
         result = list()
         for feature in self.CandidateFeatures:
             features = copy(self.SelectedFeatures)
-            features.append(feature)
+            features.insert(0,feature)
             result.append(features)
 
         return result

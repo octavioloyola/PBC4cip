@@ -41,8 +41,8 @@ class DecisionTree():
 
 class DecisionTreeNode():
 
-    def __init__(self):
-        self.Data = []
+    def __init__(self, data):
+        self.Data = data
         self.Parent = None
         self.ChildSelector = None
         self.Children = []

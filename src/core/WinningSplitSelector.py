@@ -16,7 +16,6 @@ class WinningSplitSelector:
 
     @property
     def WinningSelector(self):
-        #print(f"WinningSelector: {self.List}")
         index = min(self.__whichBetterToFind - 1, len(self.List) - 1)
         return self.List[index][1]
 
@@ -44,7 +43,6 @@ class WinningSplitSelector:
         return False
 
     def IsWinner(self):
-        #print(f"self.List: {self.List} size: {len(self.List)}")
         return len(self.List) > 0
 
 

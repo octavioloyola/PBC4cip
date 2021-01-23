@@ -19,13 +19,10 @@ class Item(object):
         self.Feature = feature
 
     def IsMatch(self, instance):
-        #print(f"Base Item IsMatch")
         return False
 
     def CompareTo(self, other):
         return SubsetRelation.Unknown
-
-# region Univariate items
 
 
 class SingleValueItem(Item):
@@ -35,8 +32,6 @@ class SingleValueItem(Item):
         self.Value = value
 
     def IsMatch(self, instance):
-        #print(f"SingleValue IsMatch {not self.Dataset.IsMissing(self.Feature, instance)}")
-        #print(f"self.Dataset{self.Dataset}")
         return not self.Dataset.IsMissing(self.Feature, instance)
 
     def GetValue(self, instance):
@@ -55,7 +50,6 @@ class SingleValueItem(Item):
 class EqualThanItem(SingleValueItem):
 
     def IsMatch(self, instance):
-        #print(f"EqualThan IsMatch")
         value = self.GetValue(instance)
         if math.isnan(value):
             return False
@@ -88,7 +82,6 @@ class EqualThanItem(SingleValueItem):
 class DifferentThanItem(SingleValueItem):
 
     def IsMatch(self, instance):
-        #print(f"DiffThan IsMatch")
         value = self.GetValue(instance)
         if math.isnan(value):
             return False
@@ -121,7 +114,6 @@ class DifferentThanItem(SingleValueItem):
 class LessOrEqualThanItem(SingleValueItem):
 
     def IsMatch(self, instance):
-        #print(f"LessThan testInstVal: {self.GetValue(instance)} patternVal: {self.Value}")
         value = self.GetValue(instance)
         if math.isnan(value):
             return False
@@ -145,8 +137,6 @@ class LessOrEqualThanItem(SingleValueItem):
 class GreatherThanItem(SingleValueItem):
 
     def IsMatch(self, instance):
-        #print(f"GreaterThan testInstVal: {self.GetValue(instance)} patternVal: {self.Value}")
-        #if super().IsMatch(instance):
         value = self.GetValue(instance)
         if math.isnan(value):
             return False
@@ -174,16 +164,13 @@ class ItemBuilder(object):
 
 class CutPointBasedBuilder(ItemBuilder):
     def GetItem(self, generalSelector, index):
-        #print(f"GetItem CutPointBasedBuilder")
         if not isinstance(generalSelector, CutPointSelector):
             raise Exception(
                 f"Unexpected type of selector {generalSelector.__class__.__name__}. Was expecting CutPointSelector")
 
         if index == 0:
-            #print(f"Index 0 LessThan")
             return LessOrEqualThanItem(generalSelector.Dataset, generalSelector.Feature, generalSelector.CutPoint)
         elif index == 1:
-            #print(f"Index 1 GreaterThan")
             return GreatherThanItem(generalSelector.Dataset, generalSelector.Feature, generalSelector.CutPoint)
         else:
             raise Exception("Invalid index value for CutPointSelector")
@@ -191,7 +178,6 @@ class CutPointBasedBuilder(ItemBuilder):
 
 class ValueAndComplementBasedBuilder(ItemBuilder):
     def GetItem(self, generalSelector, index):
-        #print(f"GetItem ValueAndComplementBasedBuilder")
         if not isinstance(generalSelector, ValueAndComplementSelector):
             raise Exception(
                 f"Unexpected type of selector {generalSelector.__class__.__name__}. Was expecting ValueAndComplementSelector")
@@ -206,7 +192,6 @@ class ValueAndComplementBasedBuilder(ItemBuilder):
 
 class MultipleValuesBasedBuilder(ItemBuilder):
     def GetItem(self, generalSelector, index):
-        #print(f"GetItem MultipleValuesBasedBuilder")
         if not isinstance(generalSelector, MultipleValuesSelector):
             raise Exception(
                 f"Unexpected type of selector {generalSelector.__class__.__name__}. Was expecting ValueAndComplementSelector")
@@ -214,9 +199,6 @@ class MultipleValuesBasedBuilder(ItemBuilder):
             raise Exception(
                 "Invalid index value for MultipleValuesSelector")
         return EqualThanItem(generalSelector.Dataset, generalSelector.Feature, generalSelector.Values[index])
-# endregion
-
-# region Multivariate items
 
 
 class MultivariateSingleValueItem(Item):
@@ -233,7 +215,6 @@ class MultivariateSingleValueItem(Item):
 class MultivariateLessOrEqualThanItem(MultivariateSingleValueItem):
 
     def IsMatch(self, instance):
-        print(f"MultiIsMatch")
         instanceValue = self.Dataset.ScalarProjection(
             instance, self.Features, self.Weights)
         if math.isnan(instanceValue):
@@ -275,7 +256,6 @@ class MultivariateLessOrEqualThanItem(MultivariateSingleValueItem):
 class MultivariateGreatherThanItem(MultivariateSingleValueItem):
 
     def IsMatch(self, instance):
-        #print(f"Multi GreaterThan IsMatch")
         instanceValue = self.Dataset.ScalarProjection(
             instance, self.Features, self.Weights)
         if math.isnan(instanceValue):
@@ -330,12 +310,10 @@ class MultivariateCutPointBasedBuilder(ItemBuilder):
             raise Exception("Invalid index value for CutPointSelector")
 
 
-# endregion
 
 
 class ItemComparer(object):
     def Compare(self, left, right):
-        #print(f"ItemComparer left: {left.Feature}, right: {right.Feature}")
         if left.Feature == right.Feature or (not left.Feature and not right.Feature):
             return left.CompareTo(right)
         return SubsetRelation.Unrelated

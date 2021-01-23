@@ -1,11 +1,14 @@
-#!/usr/bin/env python
-# coding: utf-8
 import os
 import argparse
 from tqdm import tqdm, trange
 from core.PBC4cip import PBC4cip
-from core.FileManipulation import WritePatternsBinary, WritePatternsCSV, ReadPatternsBinary, WriteClassificationResults, WriteResultsCSV
-from core.PatternMiner import PatternMiner, PatternMinerWithoutFiltering
+from core.FileManipulation import WritePatternsBinary, WritePatternsCSV, ReadPatternsBinary, WriteClassificationResults, WriteResultsCSV, returnX_y
+from core.DecisionTreeBuilder import DecisionTreeBuilder, MultivariateDecisionTreeBuilder
+from core.PatternMiner import PatternMinerWithoutFiltering
+from core.PatternFilter import MaximalPatternsGlobalFilter
+from core.DistributionEvaluator import Hellinger, MultiClassHellinger, QuinlanGain
+from core.Evaluation import CrispAndPartitionEvaluation, Evaluate
+from core.Helpers import ArgMax
 from core.Dataset import Dataset
 from datetime import datetime
 
@@ -20,11 +23,9 @@ def CheckSuffix(file, suffix):
 
 
 def GetFilesFromDirectory(directory):
-    print("aaaa")
     print(directory)
     files = []
     if os.path.isdir(directory):
-        # r=root, d=directories, f = files
         for r, d, f in os.walk(directory):
             for file in f:
                 files.append(os.path.join(r, file))
@@ -32,49 +33,61 @@ def GetFilesFromDirectory(directory):
     else:
         raise Exception(f"Directory {directory} is not valid.")
 
-
-def Train(file, outputDirectory, treeCount, multivariate, filtering, suffix=None):
-    print(f"Training is about to begin")
-    classifier = PBC4cip(file)
-    patterns = classifier.Training(multivariate, filtering, treeCount)
-    print(f"Patterns in Train are: {len(patterns)}")
-    #WritePatternsCSV(patterns, file, outputDirectory, suffix) #Create the csv file with patterns
-    WritePatternsBinary(patterns, file, outputDirectory, suffix) #Create the .pypatterns file
-
-
-def Classify(file, outputDirectory, resultsId, delete, suffix=None):
-    print("Testing is about to begin")
-
-    try:
-        classifier = PBC4cip()
-        patterns = ReadPatternsBinary(file, outputDirectory, delete, suffix)
-        confusion, acc, auc = classifier.Classification(patterns, testInstances)
-        #WriteClassificationResults(confusion, acc, auc, file, outputDirectory, suffix)
-        WriteResultsCSV(confusion, acc, auc, len(patterns), file, outputDirectory, resultsId, None)
-
-        for i in range(len(confusion[0])):
-            for j in range(len(confusion[0])):
-                print(f"{confusion[i][j]} ", end='')
-            print("")
-        print(f"acc: {acc} , auc: {auc} , numPatterns: {len(patterns)}")
-    except Exception as e:
-        print(e)
-
-def Train_and_test(trainFile, outputDirectory, treeCount, multivariate, filtering, testFile, resultsId, delete):
-    print(f"Train and Test")
-    classifier = PBC4cip()
-    patterns = classifier.Training(multivariate, filtering, trainFile, treeCount )
-    print(f"Now start testing")
-    confusion, acc, auc = classifier.Classification(patterns, testFile)
-    print(f"TrainLen: {trainFile} testLen: {testFile}")
-    WriteResultsCSV(confusion, acc, auc, len(patterns), testFile, outputDirectory, resultsId, filtering)
-
+def show_results(confusion, acc, auc, numPatterns):
+    print()
     for i in range(len(confusion[0])):
         for j in range(len(confusion[0])):
             print(f"{confusion[i][j]} ", end='')
         print("")
-    print(f"acc: {acc} , auc: {auc} , numPatterns: {len(patterns)}")
+    print(f"acc: {acc} , auc: {auc} , numPatterns: {numPatterns}")
 
+def prediction(X, y, patterns, classifier, dataset):
+        if not patterns or len(patterns) == 0:
+            raise Exception(
+                "In order to classify, previously extracted patterns are required.")
+
+        classification_results = list()
+
+        for instance in tqdm(X, desc=f"Classifying instances", unit="instance", leave=False):
+            result = classifier.predict(instance)
+            classification_results.append(result)
+
+        
+        real = list(map(lambda instance: dataset.GetClassValue(instance), y))
+        predicted = [ArgMax(instance) for instance in classification_results]
+
+        return Evaluate(dataset.Class[1], real, predicted)
+
+def Train_and_test(X_train, y_train, X_test, y_test, treeCount, multivariate, filtering, dataset):
+    classifier = PBC4cip(treeCount)
+    miner = PatternMinerWithoutFiltering()
+    miner.dataset = dataset
+    classifier.miner = miner
+    if filtering:
+        filterer = MaximalPatternsGlobalFilter()
+        classifier.filterer = filterer
+
+    classifier.multivariate = multivariate
+    if multivariate:
+        miner.decisionTreeBuilder = MultivariateDecisionTreeBuilder(dataset)
+        miner.decisionTreeBuilder.distributionEvaluator = QuinlanGain
+    else:
+        miner.decisionTreeBuilder = DecisionTreeBuilder(dataset)
+        miner.decisionTreeBuilder.distributionEvaluator = QuinlanGain
+    classifier.dataset = dataset
+    patterns = classifier.fit(X_train, y_train)
+    confusion, acc, auc = prediction(X_test, y_test, patterns, classifier, dataset)
+    return patterns, confusion, acc, auc
+
+def runPBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering, testFile, resultsId, delete):
+    X_train, y_train = returnX_y(trainFile)
+    X_test, y_test = returnX_y(testFile)
+    dataset = Dataset(trainFile)
+    patterns, confusion, acc, auc = Train_and_test(X_train, y_train, X_test, y_test, treeCount, multivariate, filtering, dataset)
+    WritePatternsCSV(patterns, trainFile, outputDirectory)
+    WritePatternsBinary(patterns, trainFile, outputDirectory)
+    WriteResultsCSV(confusion, acc, auc, len(patterns), testFile, outputDirectory, resultsId, filtering)
+    show_results(confusion, acc, auc, len(patterns))
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -88,10 +101,6 @@ def str2bool(v):
 
 
 def Execute(args):
-    # Initialize the array of testing and training dataset files
-
-    # region File lists initialization
-
     testing_files = []
     training_files = []
 
@@ -117,44 +126,16 @@ def Execute(args):
     print(
         f"Testing files detected (*{args.test_file_suffix}.[arff|dat]): {len(testing_files)}")
 
-   # endregion
-
     print("===============================================================================")
-    if len(training_files) == len(testing_files):
-        tra = trange(len(training_files), desc='Training and Testing Files...', leave=True, unit="dataset")
+    tra = trange(len(training_files), desc='Training and Testing Files...', leave=True, unit="dataset")
 
-        now = datetime.now()  # current date and time
-        resultsId = now.strftime("%Y%m%d%H%M%S")
+    now = datetime.now()
+    resultsId = now.strftime("%Y%m%d%H%M%S")
 
-        for f in tra:
-            tra.set_description(f"Working from {training_files[f]}")
-            Train_and_test(training_files[f], args.output_directory, args.tree_count, args.multivariate,
-                args.filtering,  testing_files[f], resultsId, args.delete_binary )
-    else:
-        tra = trange(len(training_files), desc='Training files...',
-                    leave=True, unit="dataset")
-        # tqdm(training_files, desc="Training files...", unit="dataset"):
-        for f in tra:
-            tra.set_description(f"Extracting patterns from {training_files[f]}")
-            tra.refresh()  # to show immediately the update
-            Train(training_files[f], args.output_directory, args.tree_count, args.multivariate,
-                args.filtering, args.training_file_suffix)
-
-        print("===============================================================================")
-        tst = trange(len(testing_files), desc='Testing files...',
-                    leave=True, unit="dataset")
-        # tqdm(testing_files, desc="Testing patterns...", unit="dataset"):
-
-        now = datetime.now()  # current date and time
-        resultsId = now.strftime("%Y%m%d%H%M%S")
-
-        for f in tst:
-            tst.set_description(f"Classifying instances from {testing_files[f]}")
-            tst.refresh()  # to show immediately the update
-            Classify(testing_files[f], args.output_directory, resultsId,
-                    args.delete_binary, args.test_file_suffix)
-            #tst.set_description(f"Results saved for {testing_files[f]}")
-            tst.refresh()  # to show immediately the update
+    for f in tra:
+        tra.set_description(f"Working from {training_files[f]}")
+        runPBC4cip(training_files[f], args.output_directory, args.tree_count, args.multivariate,
+            args.filtering,  testing_files[f], resultsId, args.delete_binary )
 
 
 if __name__ == '__main__':
@@ -166,48 +147,35 @@ if __name__ == '__main__':
 
     defaultTrainingFiles = list()
     defaultTestingFiles = list()
-
-    # Some samples to test the program (they are already in the data folder)
-    # region Default files
-    # defaultTrainingFiles.append(os.path.join(os.path.normpath(
-    #     defaultDataDir), "winequality-white-3_vs_7tra.dat"))
-    # defaultTestingFiles.append(os.path.join(os.path.normpath(
-    #     defaultDataDir), "winequality-white-3_vs_7tst.dat"))
-    # endregion
     parser = argparse.ArgumentParser(
-        description="Process some class imbalace datasets using PBC4cip.")
+        description="Process class imbalanced datasets using PBC4cip.")
 
     parser.add_argument("--training-files",
                         type=str,
                         metavar="<*.dat/*.arff>",
-                        # default=defaultTrainingFiles,
                         nargs="+",
                         help="a file or files that are going to be used to train the classifier")
 
     parser.add_argument("--training-directory",
                         type=str,
                         metavar="'"+defaultDataDir+"'",
-                        # default=defaultDataDir,
                         help="the directory with files to be used to train the classifier")
 
     parser.add_argument("--input-files",
                         type=str,
                         metavar="<*.dat/*.arff>",
-                        # default=defaultTestingFiles,
                         nargs="+",
                         help="a file or files to be classified")
 
     parser.add_argument("--input-directory",
                         type=str,
                         metavar="'"+defaultDataDir+"'",
-                        #default=defaultDataDir,
                         help="the directory with files to be classified")
 
     parser.add_argument("--output-directory",
                         type=str,
                         metavar="'"+defaultOutputDir+"'",
                         default=defaultOutputDir,
-                        # default="\\root\\parentDir\\dir",
                         help="the output directory for the patterns")
 
     parser.add_argument("--multivariate",
@@ -215,7 +183,7 @@ if __name__ == '__main__':
                         const=True,
                         default=False,
                         nargs='?',
-                        help="states if multivariate variant is to be used")
+                        help="states if multivariate tree builder variant is to be used")
 
     parser.add_argument("--delete-binary",
                         type=str2bool,
@@ -261,13 +229,7 @@ if __name__ == '__main__':
     print("                                       |                  ")
     print("                                       o                  ")
     print("==========================================================")
-    print()
-    # Arguments received: Uncomment for debbuging purposes
-    # print()
-    # Uncomment for debbuging purposes
-    print()
 
-    print(f"Args: \n {args} \n\n")
     if not args.training_files and not args.training_directory and not args.input_files and not args.input_directory:
         parser.print_help()
     else:

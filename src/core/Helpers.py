@@ -40,21 +40,17 @@ def Substract(a, b):
     return list(map(operator.sub, a, b))
 
 
-def CreateMembershipTuple(instances):
-    tuples = tuple(map(lambda instance: (instance, 1.0), instances))
-    return tuples
+def CreateMembershipTupleList(instances):
+    tupleList =  [(x,1.0) for x in instances]
+    return tupleList
 
-
+#Find Distribution of class values in dataset, i.e how many positive vs negative instances there are
 def FindDistribution(source, model, classFeature):
-    #print(f"classFeature: {classFeature}")
-
     if isinstance(classFeature[1], str):
         raise Exception("Cannot find distribution for non-nominal class")
 
     result = [0]*len(classFeature[1])
     classIdx = model.index(classFeature)
-    #print(f"model: {model}")
-    #print(f"classIdx: {classIdx}")
 
     for element in source:
         value = classFeature[1].index(element[0][classIdx])
@@ -63,5 +59,5 @@ def FindDistribution(source, model, classFeature):
         else:
             continue
 
-    #print(f"result in FindDistribution: {result}")
     return result
+

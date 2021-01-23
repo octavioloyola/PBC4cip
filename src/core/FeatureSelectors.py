@@ -1,8 +1,5 @@
 import math
 
-# region Single feature selectors
-
-
 class SingleFeatureSelector(object):
     def __init__(self, dataset, feature):
         self.ChildrenCount = 2
@@ -92,11 +89,6 @@ class ValueAndComplementSelector(SingleFeatureSelector):
     def __repr__(self):
         return f"{self.Feature[0]}={self.Dataset.GetValueOfIndex(self.Feature[0],self.Value)}"
 
-# endregion
-
-
-# region Multiple feature selectors
-
 
 class MultipleFeaturesSelector(object):
     def __init__(self, dataset, features):
@@ -147,4 +139,3 @@ class MultivariateCutPointSelector(MultipleFeaturesSelector):
             map(lambda weight: str(self.Weights[weight]) + " * " + weight[0], self.Weights))
         return f"{linearCombination}<={self.CutPoint}"
 
-# endregion

@@ -11,22 +11,15 @@ from copy import copy, deepcopy
 import numpy as np
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 
-# region Univariate Split
-
-
 class SplitIteratorProvider(object):
     def __init__(self, dataset):
         self.Dataset = dataset
 
     def GetSplitIterator(self, feature):
         currentFeature = self.Dataset.GetAttribute(feature)
-        #return NominalSplitIterator(self.Dataset, currentFeature)
-        #print(f"currFeature {currentFeature}")
         if self.Dataset.IsNominalFeature(currentFeature):
-            #print(f"{currentFeature} isNominal")
             return NominalSplitIterator(self.Dataset, currentFeature)
         else:
-            #print(f"{currentFeature} isNumeric")
             return NumericSplitIterator(self.Dataset, currentFeature)
 
 
@@ -41,9 +34,7 @@ class SplitIterator(object):
         self._numClasses = 0
         self._instances = 0
 
-    # region Common methods
     def Initialize(self, instances):
-        #print(f"SplitIterator is initializing")
         if not self.Model:
             raise Exception("Model is null")
         if self.Class[1] in ['numeric', 'real', 'integer', 'string']:
@@ -60,9 +51,6 @@ class SplitIterator(object):
 
     def CreateCurrentChildSelector(self):
         return None
-    # endregion
-
-    # region Support methods
     def GetFeatureIdx(self):
         return self.Dataset.GetFeatureIdx(self.Feature)
 
@@ -74,7 +62,6 @@ class SplitIterator(object):
 
     def GetClassValue(self, instance):
         return self.Dataset.GetClasses().index(instance[self.Dataset.GetClassIdx()])
-    # endregion
 
 
 class NumericSplitIterator(SplitIterator):
@@ -88,14 +75,9 @@ class NumericSplitIterator(SplitIterator):
         self.__selectorFeatureValue = 0
 
     def Initialize(self, instances):
-        #print(f"NumericSplitIterator is initializing")
         super().Initialize(instances)
 
         self._initialized = True
-        #print(f"instances numericSplit: {instances}")
-        #print(f"instances numericSplitLen: {len(instances)}")
-        #print(f"feature: {self.Feature}")
-        
 
         if self.Dataset.IsNominalFeature(self.Feature):
             raise Exception("Cannot use this iterator on non-numeric feature")
@@ -108,34 +90,18 @@ class NumericSplitIterator(SplitIterator):
             raise Exception(
                 f"Feature type {self.Feature[1]} is not considered")
 
-        #print(f"type{type(instances)}")
-        #print(f"typeInst{type(instances[0])}")
-        #print(f"typeFirst{type(instances[0][0])}")
-        #print(f"typeSecond{type(instances[0][1])}")
-        #print(f"Idx: {self.GetFeatureIdx()}")
-        #print(f"instances {instances}")
-
         instList = list(instances)
         self.__sortedInstances = list(
             filter(lambda element: not self.IsMissing(element[0]), instList))
-        #self.__sortedInstances.sort(
-            #key=lambda element: self.GetFeatureValue(element[0]))
-        #self.__sortedInstances.sort(
-            #key=lambda element: element[0][self.GetFeatureIdx()])
 
         sortedInsts = sorted(instList, key=lambda element: element[0][self.GetFeatureIdx()])
-        #print(f"instances{instList}")
-        #print(f"sorted:\n {sortedInsts}")
         self.__sortedInstances = sortedInsts
 
-
-        #print(f"sorted:\n {self.__sortedInstances}")
 
         self.CurrentDistribution[0] = [0]*self._numClasses
         self.CurrentDistribution[1] = FindDistribution(
             self.__sortedInstances, self.Model, self.Dataset.Class)
 
-        #print(f"CurrDist[0]: {self.CurrentDistribution[0]}, CurrDist[1]: {self.CurrentDistribution[1]}")
 
         if (len(self.__sortedInstances) == 0):
             return
@@ -149,7 +115,6 @@ class NumericSplitIterator(SplitIterator):
             return False
 
         self.__currentIndex += 1
-        #print(f"getCutting: {self.__cuttingStrategy}")
         while self.__currentIndex < len(self.__sortedInstances) - 1:
             instance = self.__sortedInstances[self.__currentIndex][0]
             objClass = self.GetClassValue(instance)
@@ -159,7 +124,6 @@ class NumericSplitIterator(SplitIterator):
             if self.GetFeatureValue(instance) != self.GetFeatureValue(self.__sortedInstances[self.__currentIndex+1][0]):
                 nextClassValue = self.FindNextClass(self.__currentIndex + 1)
                 if (self.__lastClassValue != nextClassValue) or (self.__lastClassValue == -1 and nextClassValue == -1):
-                    # CuttingStrategy = self.__iterators[self.Feature[1].lower()]
                     self.__selectorFeatureValue = self.__cuttingStrategy(
                         instance)
                     self.__lastClassValue = nextClassValue
@@ -172,7 +136,6 @@ class NumericSplitIterator(SplitIterator):
         selector.CutPoint = self.__selectorFeatureValue
         return selector
 
-    # region Helping methods
     def FindNextClass(self, index):
         currentClass = self.GetClassValue(self.__sortedInstances[index][0])
         currentValue = self.GetFeatureValue(self.__sortedInstances[index][0])
@@ -188,7 +151,6 @@ class NumericSplitIterator(SplitIterator):
 
     def NumericCenterBetweenPoints(self, instance):
         return (instance[self.GetFeatureIdx()] + self.__sortedInstances[self.__currentIndex+1][0][self.GetFeatureIdx()]) / 2
-    # endregion
 
 
 class NominalSplitIterator(SplitIterator):
@@ -254,16 +216,11 @@ class NominalSplitIterator(SplitIterator):
             selector.Value = self.__existingValues[self.__valueIndex]
         return selector
 
-    # region Helping methods
 
     def CalculateCurrent(self, current):
         self.CurrentDistribution[0] = current
         self.CurrentDistribution[1] = Substract(
             self.__totalDistribution, current)
-    # endregion
-
-# endregion
-
 
 class MultivariateSplitIteratorProvider(SplitIteratorProvider):
     def __init__(self, dataset):
@@ -361,7 +318,6 @@ class MultivariateOrderedFeatureSplitIterator(MultivariateSplitIterator):
             if value != self.__sortedInstances[self.__currentIndex+1][2]:
                 nextClassValue = self.FindNextClass(self.__currentIndex + 1)
                 if (self.__lastClassValue != nextClassValue) or (self.__lastClassValue == -1 and nextClassValue == -1):
-                    # CuttingStrategy = self.__iterators[self.Feature[1].lower()]
                     self.__selectorFeatureValue = self.__cuttingStrategy(value)
                     self.__lastClassValue = nextClassValue
                     return True
@@ -417,8 +373,6 @@ class MultivariateOrderedFeatureSplitIterator(MultivariateSplitIterator):
                 if ( (not math.isnan(divNum)) and divNum < self.WMin):
                     print("x/w_norm is smaller than wMin")
                     return list()
-                #else:
-                    #print(f"bigg {self.WMin}") 
 
             return list(map(lambda r: r[0], ldaOutput))
 

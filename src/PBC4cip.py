@@ -2,7 +2,7 @@ import math
 from io import StringIO, BytesIO
 from core.Helpers import ArgMax
 from core.DecisionTreeBuilder import DecisionTreeBuilder, MultivariateDecisionTreeBuilder
-from core.PatternMiner import PatternMinerWithoutFiltering
+from PatternMiner import PatternMinerWithoutFiltering
 from core.DistributionEvaluator import Hellinger, MultiClassHellinger, QuinlanGain
 from core.DistributionTester import PureNodeStopCondition, AlwaysTrue
 from core.Item import SubsetRelation

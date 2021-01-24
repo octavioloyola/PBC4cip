@@ -3,7 +3,7 @@ import random
 from core.DecisionTree import DecisionTree, DecisionTreeNode
 from core.WinningSplitSelector import WinningSplitSelector
 from core.SplitIterator import SplitIterator
-from core.Helpers import CreateMembershipTupleList, FindDistribution
+from core.Helpers import CreateMembershipTupleList, FindDistribution, combine_instances
 from core.SplitIterator import SplitIteratorProvider, MultivariateSplitIteratorProvider
 from core.ForwardFeatureIterator import ForwardFeatureIterator
 from core.DistributionTester import PureNodeStopCondition, AlwaysTrue
@@ -11,13 +11,15 @@ from core.DistributionTester import PureNodeStopCondition, AlwaysTrue
 
 
 class DecisionTreeBuilder():
-    def __init__(self, dataset):
+    def __init__(self, dataset, X, y):
         self.__MinimalInstanceMembership = 0.05
         self.__MinimalSplitGain = 1e-30
         self.__MinimalObjByLeaf = 2
         self.__MaxDepth = -1
         self.__PruneResult = False
         self.__Dataset = dataset
+        self.idk = X
+        self.__trainInstances = combine_instances(X, y)
         self.__FeatureCount = 0
         self.__StopCondition = PureNodeStopCondition
         self.__distributionEvaluator = None
@@ -57,6 +59,13 @@ class DecisionTreeBuilder():
     @Dataset.setter
     def Dataset(self, new_dataset):
         self.__Dataset = new_dataset
+
+    @property
+    def trainInstances(self):
+        return self.__trainInstances
+    @trainInstances.setter
+    def trainInstances(self, new_train_instances):
+        self.__trainInstances = new_train_instances
     
     @property
     def distributionEvaluator(self):
@@ -68,13 +77,11 @@ class DecisionTreeBuilder():
 
     def Build(self):
         if self.MinimalSplitGain <= 0:
-            print(f"MinimalSplitGain err in Build UniVariate")
+            raise Exception(f"MinimalSplitGain err in Build UniVariate")
             self.MinimalSplitGain = 1e-30
 
         currentContext = []
-
-
-        objectMebership = CreateMembershipTupleList(self.Dataset.Instances)
+        objectMebership = CreateMembershipTupleList(self.trainInstances)
         classFeature = self.Dataset.Class
         result = DecisionTree(self.Dataset)
 
@@ -158,9 +165,10 @@ class SelectorContext():
 
 
 class MultivariateDecisionTreeBuilder(DecisionTreeBuilder):
-    def __init__(self, dataset):
+    def __init__(self, dataset, X, y):
         super().__init__(dataset)
         self.MinimalForwardGain = 0
+        self.__trainInstances = combine_instances(X, y)
         self.WMin = 0  # Minimal absolute value for each weight after normalizing
         self.SplitIteratorProvider = MultivariateSplitIteratorProvider(
             self.Dataset)
@@ -171,7 +179,8 @@ class MultivariateDecisionTreeBuilder(DecisionTreeBuilder):
 
         currentContext = []
 
-        objectMebership = CreateMembershipTupleList(self.Dataset.Instances)
+        objectMebership = CreateMembershipTupleList(self.trainInstances)
+
         classFeature = self.Dataset.Class
 
         result = DecisionTree(self.Dataset)

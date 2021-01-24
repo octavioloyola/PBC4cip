@@ -161,6 +161,7 @@ class EmergingPatternCreator(object):
             newPattern.Counts = node.Data
             newPattern.Supports = newPattern.CalculateSupports(node.Data)
             if patternFound is not None:
+                print(f"Pattern: {newPattern}")
                 patternFound(newPattern)
         else:
             for index in range(len(node.Children)):

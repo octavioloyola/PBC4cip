@@ -1,7 +1,9 @@
 import math
 import random
 import operator
-
+import numpy as np
+import pandas as pd
+from itertools import chain
 
 def SumMatrix(matrix):
     if not matrix or len(matrix) == 0:
@@ -43,6 +45,16 @@ def Substract(a, b):
 def CreateMembershipTupleList(instances):
     tupleList =  [(x,1.0) for x in instances]
     return tupleList
+
+def combine_instances(X, y):
+    combined_list = []
+    for i,val in enumerate(X):
+        combined_list.append(__chain_together(val, y[i]))
+    result = np.asarray(combined_list, dtype= np.object)
+    return result
+
+def __chain_together(a, b):
+    return list(chain(*[a,b]))
 
 #Find Distribution of class values in dataset, i.e how many positive vs negative instances there are
 def FindDistribution(source, model, classFeature):

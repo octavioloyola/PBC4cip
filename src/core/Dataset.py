@@ -20,11 +20,15 @@ class Dataset(object):
 
         self.Model = arffFile['attributes']
 
-        self.Instances = pd.DataFrame.from_records(
+        self.__Instances = pd.DataFrame.from_records(
             arffFile['data'], columns=list(
                 map(lambda attribute: attribute[0], self.Model))).values
 
         self.Features = None
+    
+    @property
+    def Instances(self):
+        return self.__Instances
 
     @property
     def Attributes(self):
@@ -121,16 +125,34 @@ class Dataset(object):
 
 class FeatureInformation(object):
     def __init__(self, dataset, feature):
-        self.Dataset = dataset
-        self.Feature = feature
-        self.MissingValueCount = 0
-        self.MinValue = 0
-        self.MaxValue = 0
-        self.Distribution = []
-        self.ValueProbability = []
-        self.Ratio = []
+        self.__Dataset = dataset
+        self.__Feature = feature
+        #self.MissingValueCount = 0
+        self.__MinValue = 0
+        self.__MaxValue = 0
+        self.__Distribution = []
+        self.__ValueProbability = []
+        self.__Ratio = []
 
         self.Initialize()
+    
+    @property
+    def Dataset(self):
+        return self.__Dataset
+    @Dataset.setter
+    def Dataset(self, new_dataset):
+        self.__Dataset = new_dataset
+
+    @property
+    def Feature(self):
+        return self.__Feature
+
+    @property
+    def Distribution(self):
+        return self.__Distribution
+    @Distribution.setter
+    def Distribution(self, new_distribution):
+        self.__Distribution = new_distribution
 
     def Initialize(self):
 
@@ -162,4 +184,5 @@ class FeatureInformation(object):
             else:
                 self.MinValue = 0
                 self.MaxValue = 0
+            
 

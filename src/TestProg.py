@@ -1,10 +1,11 @@
 import os
 import argparse
+
 from tqdm import tqdm, trange
-from core.PBC4cip import PBC4cip
+from PBC4cip import PBC4cip
 from core.FileManipulation import WritePatternsBinary, WritePatternsCSV, ReadPatternsBinary, WriteClassificationResults, WriteResultsCSV, returnX_y
 from core.DecisionTreeBuilder import DecisionTreeBuilder, MultivariateDecisionTreeBuilder
-from core.PatternMiner import PatternMinerWithoutFiltering
+from PatternMiner import PatternMinerWithoutFiltering
 from core.PatternFilter import MaximalPatternsGlobalFilter
 from core.DistributionEvaluator import Hellinger, MultiClassHellinger, QuinlanGain
 from core.Evaluation import CrispAndPartitionEvaluation, Evaluate
@@ -12,26 +13,6 @@ from core.Helpers import ArgMax
 from core.Dataset import Dataset
 from datetime import datetime
 
-
-def CheckSuffix(file, suffix):
-    if not suffix or len(suffix) == 0:
-        return True
-    if not suffix in file or len(suffix) >= len(file):
-        return False
-    filename, file_extension = os.path.splitext(file)
-    return filename[(len(suffix)*-1):] == suffix
-
-
-def GetFilesFromDirectory(directory):
-    print(directory)
-    files = []
-    if os.path.isdir(directory):
-        for r, d, f in os.walk(directory):
-            for file in f:
-                files.append(os.path.join(r, file))
-        return files
-    else:
-        raise Exception(f"Directory {directory} is not valid.")
 
 def show_results(confusion, acc, auc, numPatterns):
     print()
@@ -54,6 +35,9 @@ def prediction(X, y, patterns, classifier, dataset):
 
         
         real = list(map(lambda instance: dataset.GetClassValue(instance), y))
+        print("\n\nClassification_Results:")
+        for result in classification_results:
+            print(f"{result}")
         predicted = [ArgMax(instance) for instance in classification_results]
 
         return Evaluate(dataset.Class[1], real, predicted)
@@ -82,6 +66,16 @@ def Train_and_test(X_train, y_train, X_test, y_test, treeCount, multivariate, fi
 def runPBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering, testFile, resultsId, delete):
     X_train, y_train = returnX_y(trainFile)
     X_test, y_test = returnX_y(testFile)
+    """
+    print(f"X_train: {X_train}")
+    print(f"y_train:")
+    for i,_ in enumerate(y_train):
+        print(f"{y_train[i]}", end ="," )
+    print(f"X_test: {X_test}")
+    print(f"y_test:")
+    for i,_ in enumerate(y_test):
+        print(f" {y_test[i]}", end ="," )
+    """
     dataset = Dataset(trainFile)
     patterns, confusion, acc, auc = Train_and_test(X_train, y_train, X_test, y_test, treeCount, multivariate, filtering, dataset)
     WritePatternsCSV(patterns, trainFile, outputDirectory)
@@ -101,41 +95,10 @@ def str2bool(v):
 
 
 def Execute(args):
-    testing_files = []
-    training_files = []
-
-    if args.training_files:
-        training_files = args.training_files
-
-    if args.training_directory:
-        training_files = list(set().union(training_files, list(filter(
-            lambda file: CheckSuffix(file, args.training_file_suffix), GetFilesFromDirectory(args.training_directory)))))
-
-    if args.input_files:
-        testing_files = args.input_files
-
-    if args.input_directory:
-        testing_files = list(set().union(testing_files, list(filter(
-            lambda file: CheckSuffix(file, args.test_file_suffix), GetFilesFromDirectory(args.input_directory)))))
-
-    training_files.sort()
-    testing_files.sort()
-
-    print(
-        f"Training files detected (*{args.training_file_suffix}.[arff|dat]): {len(training_files)}")
-    print(
-        f"Testing files detected (*{args.test_file_suffix}.[arff|dat]): {len(testing_files)}")
-
-    print("===============================================================================")
-    tra = trange(len(training_files), desc='Training and Testing Files...', leave=True, unit="dataset")
-
     now = datetime.now()
     resultsId = now.strftime("%Y%m%d%H%M%S")
-
-    for f in tra:
-        tra.set_description(f"Working from {training_files[f]}")
-        runPBC4cip(training_files[f], args.output_directory, args.tree_count, args.multivariate,
-            args.filtering,  testing_files[f], resultsId, args.delete_binary )
+    runPBC4cip(args.training_files[0], args.output_directory, args.tree_count, args.multivariate,
+        args.filtering, args.input_files[0], resultsId, args.delete_binary)
 
 
 if __name__ == '__main__':
@@ -156,21 +119,11 @@ if __name__ == '__main__':
                         nargs="+",
                         help="a file or files that are going to be used to train the classifier")
 
-    parser.add_argument("--training-directory",
-                        type=str,
-                        metavar="'"+defaultDataDir+"'",
-                        help="the directory with files to be used to train the classifier")
-
     parser.add_argument("--input-files",
                         type=str,
                         metavar="<*.dat/*.arff>",
                         nargs="+",
                         help="a file or files to be classified")
-
-    parser.add_argument("--input-directory",
-                        type=str,
-                        metavar="'"+defaultDataDir+"'",
-                        help="the directory with files to be classified")
 
     parser.add_argument("--output-directory",
                         type=str,
@@ -203,33 +156,9 @@ if __name__ == '__main__':
                         default=False,
                         nargs='?',
                         help="Decides wether the found patterns are to be filtered or not")
-
-    parser.add_argument("--test-file-suffix",
-                        type=str,
-                        metavar="'tst'",
-                        default="tst",
-                        help="states which suffix will indicate the test files")
-
-    parser.add_argument("--training-file-suffix",
-                        type=str,
-                        metavar="'tra'",
-                        default="tra",
-                        help="states which suffix will indicate the training files")
-
     
 
     args = parser.parse_args()
-
-    print("==========================================================")
-    print("         o--o  o--o    o-o o  o                           ")
-    print("         |   | |   |  /    |  |      o                    ")
-    print("         O--o  O--o  O     o--O  o-o   o-o                ")
-    print("         |     |   |  \       | |    | |  |               ")
-    print("         o     o--o    o-o    o  o-o | O-o                ")
-    print("                                       |                  ")
-    print("                                       o                  ")
-    print("==========================================================")
-
     if not args.training_files and not args.training_directory and not args.input_files and not args.input_directory:
         parser.print_help()
     else:

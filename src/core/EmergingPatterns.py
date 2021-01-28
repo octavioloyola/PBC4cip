@@ -151,7 +151,6 @@ class EmergingPatternCreator(object):
 
     def ExtractPatterns(self, treeClassifier, patternFound):
         context = list()
-        print()
         self.__DoExtractPatterns(
             treeClassifier.DecisionTree.TreeRootNode, context, patternFound)
 

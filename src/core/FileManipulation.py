@@ -199,12 +199,23 @@ def GetFromFile(file):
 
 def returnX_y(file):
         arff_file = GetFromFile(file)
-        instancesDf = pd.DataFrame.from_records(
-            arff_file['data'], columns=list(
-                map(lambda attribute: attribute[0], arff_file['attributes'])
-            )
-        )
+        instancesDf = get_dataframe_from_arff(arff_file)
         instances = instancesDf.to_numpy()
         X = instances[:, 0:len(instances[0])-1]
         y = instances[:, len(instances[0])-1 : len(instances[0])]
         return X,y
+    
+def returnX_y_pandas(df):
+        
+        instances = df.to_numpy()
+        X = instances[:, 0:len(instances[0])-1]
+        y = instances[:, len(instances[0])-1 : len(instances[0])]
+        return X,y
+
+def get_dataframe_from_arff(arff_file):
+    instancesDf = pd.DataFrame.from_records(
+            arff_file['data'], columns=list(
+                map(lambda attribute: attribute[0], arff_file['attributes'])
+            )
+        )
+    return instancesDf

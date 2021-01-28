@@ -131,7 +131,7 @@ def Evaluate(classes, real, predicted):
         confusion[real[i]][predicted[i]] = confusion[real[i]][predicted[i]] + 1
 
     acc = 100.0 * (len(real) - error_count) / len(real)
-    auc = __obtainAUCMulticlass(confusion, len(classes))
+    auc = obtainAUCMulticlass(confusion, len(classes))
         
     
     return confusion, acc, auc
@@ -175,7 +175,7 @@ def __obtainAUCBinary(tp, tn, fp, fn):
         
         return (recall + sensibility) / 2
 
-def __obtainAUCMulticlass(confusion, num_classes):
+def obtainAUCMulticlass(confusion, num_classes):
     sumVal = 0
     for i in range(num_classes):
         tp = confusion[i][i]

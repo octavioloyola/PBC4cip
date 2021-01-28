@@ -58,6 +58,7 @@ def __chain_together(a, b):
 
 #Find Distribution of class values in dataset, i.e how many positive vs negative instances there are
 def FindDistribution(source, model, classFeature):
+    #print(f" model {model} class{classFeature}")
     if isinstance(classFeature[1], str):
         raise Exception("Cannot find distribution for non-nominal class")
 
@@ -66,10 +67,18 @@ def FindDistribution(source, model, classFeature):
 
     for element in source:
         value = classFeature[1].index(element[0][classIdx])
+        #print(f"element: {element}")
         if value >= 0:
             result[value] += element[1]
         else:
             continue
 
     return result
+
+def convert_to_ndarray(y):
+    new_y = []
+    for y_elem in y:
+         new_y.append(np.array([y_elem], dtype=np.object))
+    pd_series = pd.Series(new_y, name='class')
+    return pd_series
 

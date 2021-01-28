@@ -43,6 +43,13 @@ class PatternMinerWithoutFiltering:
             self.__MinePatternsWhileBuildingTree = minePatternsWhileBuildingTree
 
     @property
+    def TreeCount(self):
+        return self.__TreeCount
+    @TreeCount.setter
+    def TreeCount(self, new_tree_count):
+        self.__TreeCount = new_tree_count
+
+    @property
     def dataset(self):
         return self.__dataset
     @dataset.setter

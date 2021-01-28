@@ -1,12 +1,138 @@
+from abc import ABC, abstractmethod 
 import os
 import random
 import math
 import pandas as pd
 import sys
-from core.FileManipulation import ReadARFF, ReadDAT, GetFromFile
+import numpy as np
+import pandas as pd
+from core.FileManipulation import ReadARFF, ReadDAT, GetFromFile, get_dataframe_from_arff
 
+class Dataset(ABC):
+    @abstractmethod
+    def GetAttribute(self, attribute):
+        pass
 
-class Dataset(object):
+class PandasDataset(Dataset):
+    def __init__(self, X,y):
+        self.Model = self.get_model_list(X,y)
+        self.Instances = self.combine_X_y(X,y)
+
+    def GetAttribute(self, attribute):
+        pass
+    def get_feature_info(self, feature):
+        if self.get_feature_col_type(feature) == 'Nominal':
+            elems = set()
+            for elem in feature:
+                elems.add(elem)
+            return sorted(elems)
+        else:
+            return self.get_feature_col_type(feature)
+    def get_feature_col_type(self, feature):
+        if isinstance(feature[0], np.int32) or isinstance(feature[0], np.int64):
+            return 'integer'
+        elif isinstance(feature[0], np.float32) or isinstance(feature[0], np.float64):
+            return 'real'
+        elif isinstance(feature[0], str):
+            return 'Nominal'
+        else:
+            raise Exception(f"Unsupported data type in feature {feature}")
+
+    def get_model_list(self, X, y):
+        result = [(feat_name, self.get_feature_info(X[f'{feat_name}'])) for feat_name in X]
+        result.append( (y.name, self.get_feature_info(y)) )
+        return result
+    
+    def combine_X_y(self, X, y):
+        instances_df = X.copy(deep=True)
+        instances_df[f'{y.name}'] = y
+        return instances_df.values
+
+    @property
+    def Attributes(self):
+        return list(
+            filter(lambda attr: attr[0].strip().lower() != 'class', self.Model))
+
+    @property
+    def Class(self):
+        return list(
+            filter(lambda attr: attr[0].strip().lower() == 'class', self.Model))[0]
+
+    @property
+    def AttributesInformation(self):
+        return list(
+            map(lambda attr: FeatureInformation(self, attr), self.Attributes))
+
+    @property
+    def ClassInformation(self):
+        return FeatureInformation(self, self.Class)
+
+    def GetAttribute(self, attribute):
+        return list(filter(lambda attr: attr[0] == attribute, self.Model))[0]
+
+    def GetAttributeNames(self):
+        return list(
+            map(lambda attribute: attribute[0], self.Model))
+
+    def GetNominalValues(self, feature):
+        attribute = list(
+            filter(lambda attr: attr[0].lower() == feature.lower(), self.Model))
+
+        if isinstance(attribute[0][1], list):
+            return attribute[0][1]
+        else:
+            return None
+
+    def GetValueOfIndex(self, feature, index):
+        values = self.GetNominalValues(feature)
+        if not values:
+            return None
+        else:
+            return values[index]
+
+    def GetIndexOfValue(self, feature, value):
+        values = self.GetNominalValues(feature)
+        if not values:
+            return -1
+        else:
+            return values.index(value)
+
+    def GetClasses(self):
+        return self.GetNominalValues('class')
+
+    def GetClassIdx(self):
+        return self.GetFeatureIdx(self.Class)
+
+    def GetFeatureIdx(self, feature):
+        return self.Model.index(feature)
+
+    def IsNominalFeature(self, feature):
+        if isinstance(feature[1], str) and feature[1].lower() == 'string':
+            raise Exception("String attributes are not supported!")
+        return isinstance(feature[1], list)
+
+    def GetFeatureValue(self, feature, instance):
+        if isinstance(feature[1], list):
+            return self.GetIndexOfValue(feature[0], instance[self.GetFeatureIdx(feature)])
+        elif feature[1].lower() in ['numeric', 'real', 'integer']:
+            return instance[self.GetFeatureIdx(feature)]
+        else:
+            raise Exception(
+                "Attribute must be either nominal, numeric, real or integer")
+    
+    def GetClassValue(self, y_instance):
+        return self.GetIndexOfValue(self.Class[0], y_instance[0])
+
+    def IsMissing(self, feature, instance):
+        value = self.GetFeatureValue(feature, instance)
+
+        if self.IsNominalFeature(feature):
+            return value < 0
+        else:
+            return (not value or value == math.nan)   
+            
+
+class FileDataset(Dataset):
 
     def __init__(self, file):
         arffFile = GetFromFile(file)
@@ -20,10 +146,7 @@ class Dataset(object):
 
         self.Model = arffFile['attributes']
 
-        self.__Instances = pd.DataFrame.from_records(
-            arffFile['data'], columns=list(
-                map(lambda attribute: attribute[0], self.Model))).values
-
+        self.__Instances = get_dataframe_from_arff(arffFile).values
         self.Features = None
     
     @property

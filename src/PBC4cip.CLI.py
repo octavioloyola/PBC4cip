@@ -1,17 +1,19 @@
 import os
 import argparse
+import numpy as np
+
 from tqdm import tqdm, trange
 from core.PBC4cip import PBC4cip
-from core.FileManipulation import WritePatternsBinary, WritePatternsCSV, ReadPatternsBinary, WriteClassificationResults, WriteResultsCSV, returnX_y
+from core.FileManipulation import WritePatternsBinary, WritePatternsCSV, ReadPatternsBinary, WriteClassificationResults
+from core.FileManipulation import WriteResultsCSV, returnX_y, get_dataframe_from_arff, GetFromFile
 from core.DecisionTreeBuilder import DecisionTreeBuilder, MultivariateDecisionTreeBuilder
 from core.PatternMiner import PatternMinerWithoutFiltering
 from core.PatternFilter import MaximalPatternsGlobalFilter
 from core.DistributionEvaluator import Hellinger, MultiClassHellinger, QuinlanGain
 from core.Evaluation import CrispAndPartitionEvaluation, Evaluate
-from core.Helpers import ArgMax
-from core.Dataset import Dataset
+from core.Helpers import ArgMax, convert_to_ndarray
+from core.Dataset import Dataset, FileDataset, PandasDataset
 from datetime import datetime
-
 
 def CheckSuffix(file, suffix):
     if not suffix or len(suffix) == 0:
@@ -41,52 +43,23 @@ def show_results(confusion, acc, auc, numPatterns):
         print("")
     print(f"acc: {acc} , auc: {auc} , numPatterns: {numPatterns}")
 
-def prediction(X, y, patterns, classifier, dataset):
-        if not patterns or len(patterns) == 0:
-            raise Exception(
-                "In order to classify, previously extracted patterns are required.")
-
-        classification_results = list()
-
-        for instance in tqdm(X, desc=f"Classifying instances", unit="instance", leave=False):
-            result = classifier.predict(instance)
-            classification_results.append(result)
-
-        
-        real = list(map(lambda instance: dataset.GetClassValue(instance), y))
-        predicted = [ArgMax(instance) for instance in classification_results]
-
-        return Evaluate(dataset.Class[1], real, predicted)
-
-def Train_and_test(X_train, y_train, X_test, y_test, treeCount, multivariate, filtering, dataset):
-    classifier = PBC4cip(treeCount)
-    miner = PatternMinerWithoutFiltering()
-    miner.dataset = dataset
-    classifier.miner = miner
-    if filtering:
-        filterer = MaximalPatternsGlobalFilter()
-        classifier.filterer = filterer
-
-    classifier.multivariate = multivariate
-    if multivariate:
-        miner.decisionTreeBuilder = MultivariateDecisionTreeBuilder(dataset, X_train, y_train)
-        miner.decisionTreeBuilder.distributionEvaluator = QuinlanGain
-    else:
-        miner.decisionTreeBuilder = DecisionTreeBuilder(dataset, X_train, y_train)
-        miner.decisionTreeBuilder.distributionEvaluator = Hellinger
-    classifier.dataset = dataset
+def Train_and_test(X_train, y_train, X_test, y_test, treeCount, multivariate, filtering, dataset=None):
+    classifier = PBC4cip(tree_count=treeCount, filtering = filtering, file_dataset=dataset)
     patterns = classifier.fit(X_train, y_train)
-    confusion, acc, auc = prediction(X_test, y_test, patterns, classifier, dataset)
+
+    y_pred = classifier.predict(X_test)
+    confusion, acc, auc = classifier.score(y_pred, y_test)
     return patterns, confusion, acc, auc
 
-def runPBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering, testFile, resultsId, delete):
+def runPBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering, testFile, resultsId, delete):    
     X_train, y_train = returnX_y(trainFile)
     X_test, y_test = returnX_y(testFile)
-    dataset = Dataset(trainFile)
-    patterns, confusion, acc, auc = Train_and_test(X_train, y_train, X_test, y_test, treeCount, multivariate, filtering, dataset)
-    WritePatternsCSV(patterns, trainFile, outputDirectory)
-    WritePatternsBinary(patterns, trainFile, outputDirectory)
-    WriteResultsCSV(confusion, acc, auc, len(patterns), testFile, outputDirectory, resultsId, filtering)
+    dataset = FileDataset(trainFile)
+    
+    patterns, confusion, acc, auc = Train_and_test(X_train, y_train, X_test, y_test, treeCount, multivariate, filtering, trainFile)
+    #WritePatternsCSV(patterns, trainFile, outputDirectory)
+    #WritePatternsBinary(patterns, trainFile, outputDirectory)
+    #WriteResultsCSV(confusion, acc, auc, len(patterns), testFile, outputDirectory, resultsId, filtering)
     show_results(confusion, acc, auc, len(patterns))
 
 def str2bool(v):

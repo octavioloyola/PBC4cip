@@ -1,26 +1,35 @@
 import math
+import numpy as np
 from io import StringIO, BytesIO
-from core.Helpers import ArgMax
+from core.Helpers import ArgMax, convert_to_ndarray
 from core.DecisionTreeBuilder import DecisionTreeBuilder, MultivariateDecisionTreeBuilder
 from PatternMiner import PatternMinerWithoutFiltering
 from core.DistributionEvaluator import Hellinger, MultiClassHellinger, QuinlanGain
 from core.DistributionTester import PureNodeStopCondition, AlwaysTrue
 from core.Item import SubsetRelation
-from core.Dataset import Dataset
-from core.Evaluation import CrispAndPartitionEvaluation, Evaluate
+from core.Dataset import Dataset, FileDataset, PandasDataset
+from core.Evaluation import CrispAndPartitionEvaluation, Evaluate, obtainAUCMulticlass
 from core.PatternFilter import MaximalPatternsGlobalFilter
 from tqdm import tqdm
 
 
 class PBC4cip:
 
-    def __init__(self, treeCount=None):
+    def __init__(self, tree_count=100, filtering=False, multivariate = False, file_dataset = None):
         self.File = None
         self.__miner = None
+        if filtering:
+            filterer = MaximalPatternsGlobalFilter()
+            self.__filterer = filterer
+        else:
+            self.__filterer = None
         self.__filterer = None
-        self.__multivariate = None
-        self.__treeCount = treeCount
-        self.__dataset = None
+        self.__multivariate = multivariate
+        self.__treeCount = tree_count
+        if file_dataset is not None:
+            self.__dataset = FileDataset(file_dataset)
+        else:
+            self.__dataset = None            
         self.__EmergingPatterns = list()
         self.__class_nominal_feature = None
         self.__normalizing_vector = None
@@ -69,16 +78,30 @@ class PBC4cip:
 
 
     def fit(self, X, y):
-        miner = self.miner
-        miner.TreeCount = self.treeCount
+        if self.dataset is None:
+            self.dataset = PandasDataset(X,y)
+            X = X.to_numpy()
+            y = y.to_numpy()
+            if  not isinstance(y[0], np.ndarray):
+                y = convert_to_ndarray(y)    
 
+        self.miner = PatternMinerWithoutFiltering()
+        miner = self.miner
+        miner.dataset = self.dataset
+        miner.TreeCount = self.treeCount
+        if self.multivariate:
+            miner.decisionTreeBuilder = MultivariateDecisionTreeBuilder(self.dataset, X, y)
+            miner.decisionTreeBuilder.distributionEvaluator = QuinlanGain
+        else:
+            miner.decisionTreeBuilder = DecisionTreeBuilder(self.dataset, X, y)
+            miner.decisionTreeBuilder.distributionEvaluator = QuinlanGain
         self.EmergingPatterns = miner.Mine()
         if self.filterer is not None:
             self.EmergingPatterns = self.filterer.Filter(self.EmergingPatterns)
         self.__ComputeVotes(X, y, self.dataset.Class[1])
         return self.EmergingPatterns
 
-    def predict(self, instance):
+    def __predict_inst(self, instance):
         votes = [0]*len(self._class_nominal_feature)
 
         for pattern in self.EmergingPatterns:
@@ -98,6 +121,39 @@ class PBC4cip:
             return result
         else:
             return self.__classDistribution
+    
+    def predict(self, X):
+        if isinstance(self.dataset, PandasDataset):
+            X = X.to_numpy()
+
+        classification_results = list()
+        for instance in tqdm(X, desc=f"Classifying instances", unit="instance", leave=False):
+            result = self.__predict_inst(instance)
+            classification_results.append(result)
+        
+        predicted = [ArgMax(instance) for instance in classification_results]
+        return predicted
+    
+    def score(self, predicted, y):
+        if isinstance(self.dataset, PandasDataset):
+            y = y.to_numpy()
+            y = convert_to_ndarray(y)
+        real = list(map(lambda instance: self.dataset.GetClassValue(instance), y))
+        numClasses = len(self._class_nominal_feature)
+        confusion = [[0]*2 for i in range(numClasses)]
+        classified_as = 0
+        error_count = 0
+
+        for i in range(len(real)):
+            if real[i] != predicted[i]:
+                error_count = error_count + 1
+            confusion[real[i]][predicted[i]] = confusion[real[i]][predicted[i]] + 1
+
+        acc = 100.0 * (len(real) - error_count) / len(real)
+        auc = obtainAUCMulticlass(confusion, numClasses)
+
+        return confusion, acc, auc
+
     
     def __ComputeVotes(self, X, y, classes):
         self._class_nominal_feature = classes
@@ -156,4 +212,5 @@ class PBC4cip:
                 classDistribution[i] = 0
 
         return classDistribution
+
 

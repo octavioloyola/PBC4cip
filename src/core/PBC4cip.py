@@ -122,7 +122,11 @@ class PBC4cip:
         else:
             return self.__classDistribution
     
-    def predict(self, X):
+    def predict(self, scored_samples):
+        predicted = [ArgMax(instance) for instance in scored_samples]
+        return predicted
+    
+    def score_samples(self, X):
         if isinstance(self.dataset, PandasDataset):
             X = X.to_numpy()
 
@@ -130,29 +134,8 @@ class PBC4cip:
         for instance in tqdm(X, desc=f"Classifying instances", unit="instance", leave=False):
             result = self.__predict_inst(instance)
             classification_results.append(result)
-        
-        predicted = [ArgMax(instance) for instance in classification_results]
-        return predicted
-    
-    def score(self, predicted, y):
-        if isinstance(self.dataset, PandasDataset):
-            y = y.to_numpy()
-            y = convert_to_ndarray(y)
-        real = list(map(lambda instance: self.dataset.GetClassValue(instance), y))
-        numClasses = len(self._class_nominal_feature)
-        confusion = [[0]*2 for i in range(numClasses)]
-        classified_as = 0
-        error_count = 0
 
-        for i in range(len(real)):
-            if real[i] != predicted[i]:
-                error_count = error_count + 1
-            confusion[real[i]][predicted[i]] = confusion[real[i]][predicted[i]] + 1
-
-        acc = 100.0 * (len(real) - error_count) / len(real)
-        auc = obtainAUCMulticlass(confusion, numClasses)
-
-        return confusion, acc, auc
+        return classification_results
 
     
     def __ComputeVotes(self, X, y, classes):

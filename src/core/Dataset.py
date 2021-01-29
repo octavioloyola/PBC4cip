@@ -6,6 +6,7 @@ import pandas as pd
 import sys
 import numpy as np
 import pandas as pd
+from core.Helpers import get_col_dist
 from core.FileManipulation import ReadARFF, ReadDAT, GetFromFile, get_dataframe_from_arff
 
 class Dataset(ABC):
@@ -22,10 +23,7 @@ class PandasDataset(Dataset):
         pass
     def get_feature_info(self, feature):
         if self.get_feature_col_type(feature) == 'Nominal':
-            elems = set()
-            for elem in feature:
-                elems.add(elem)
-            return sorted(elems)
+            return get_col_dist(feature)
         else:
             return self.get_feature_col_type(feature)
     def get_feature_col_type(self, feature):
@@ -40,12 +38,14 @@ class PandasDataset(Dataset):
 
     def get_model_list(self, X, y):
         result = [(feat_name, self.get_feature_info(X[f'{feat_name}'])) for feat_name in X]
-        result.append( (y.name, self.get_feature_info(y)) )
+        class_res = [(feat_name, self.get_feature_info(y[f'{feat_name}'])) for feat_name in y]
+        result.append(class_res[0])
         return result
     
     def combine_X_y(self, X, y):
+        y_name = list(y.columns)[0] 
         instances_df = X.copy(deep=True)
-        instances_df[f'{y.name}'] = y
+        instances_df[f'{y_name}'] = y[f'{y_name}']
         return instances_df.values
 
     @property

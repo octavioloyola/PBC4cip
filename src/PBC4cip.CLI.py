@@ -1,17 +1,18 @@
 import os
 import argparse
 import numpy as np
+import pandas as pd
 
 from tqdm import tqdm, trange
 from core.PBC4cip import PBC4cip
 from core.FileManipulation import WritePatternsBinary, WritePatternsCSV, ReadPatternsBinary, WriteClassificationResults
-from core.FileManipulation import WriteResultsCSV, returnX_y, get_dataframe_from_arff, GetFromFile
+from core.FileManipulation import WriteResultsCSV, returnX_y, get_dataframe_from_arff, GetFromFile, convert_dat_to_csv
 from core.DecisionTreeBuilder import DecisionTreeBuilder, MultivariateDecisionTreeBuilder
 from core.PatternMiner import PatternMinerWithoutFiltering
 from core.PatternFilter import MaximalPatternsGlobalFilter
 from core.DistributionEvaluator import Hellinger, MultiClassHellinger, QuinlanGain
-from core.Evaluation import CrispAndPartitionEvaluation, Evaluate
-from core.Helpers import ArgMax, convert_to_ndarray
+from core.Evaluation import obtainAUCMulticlass
+from core.Helpers import ArgMax, convert_to_ndarray, get_col_dist, get_idx_val
 from core.Dataset import Dataset, FileDataset, PandasDataset
 from datetime import datetime
 
@@ -35,6 +36,39 @@ def GetFilesFromDirectory(directory):
     else:
         raise Exception(f"Directory {directory} is not valid.")
 
+def import_data(trainFile, testFile):
+    train = pd.read_csv(trainFile, sep= ',') 
+    test = pd.read_csv(testFile, sep= ',')
+
+    return train, test
+
+def split_data(train, test):
+    X_train = train.iloc[:,  0:train.shape[1]-1]
+    y_train =  train.iloc[:, train.shape[1]-1 : train.shape[1]]
+
+    X_test = test.iloc[:,  0:test.shape[1]-1]
+    y_test =  test.iloc[:, test.shape[1]-1 : test.shape[1]]
+
+    return X_train, y_train, X_test, y_test
+
+def score(predicted, y):
+        y_class_dist = get_col_dist(y[f'{y.columns[0]}'])
+        real = list(map(lambda instance: get_idx_val(y_class_dist, instance), y[f'{y.columns[0]}']))
+        numClasses = len(y_class_dist)
+        confusion = [[0]*2 for i in range(numClasses)]
+        classified_as = 0
+        error_count = 0
+
+        for i in range(len(real)):
+            if real[i] != predicted[i]:
+                error_count = error_count + 1
+            confusion[real[i]][predicted[i]] = confusion[real[i]][predicted[i]] + 1
+
+        acc = 100.0 * (len(real) - error_count) / len(real)
+        auc = obtainAUCMulticlass(confusion, numClasses)
+
+        return confusion, acc, auc
+
 def show_results(confusion, acc, auc, numPatterns):
     print()
     for i in range(len(confusion[0])):
@@ -49,18 +83,36 @@ def Train_and_test(X_train, y_train, X_test, y_test, treeCount, multivariate, fi
 
     y_pred = classifier.predict(X_test)
     confusion, acc, auc = classifier.score(y_pred, y_test)
+
+    
     return patterns, confusion, acc, auc
 
-def runPBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering, testFile, resultsId, delete):    
+def test_PBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering, testFile, resultsId, delete):    
+    """
     X_train, y_train = returnX_y(trainFile)
     X_test, y_test = returnX_y(testFile)
-    dataset = FileDataset(trainFile)
+    #patterns, confusion, acc, auc = Train_and_test(X_train, y_train, X_test, y_test, treeCount, multivariate, filtering)
+    """
     
-    patterns, confusion, acc, auc = Train_and_test(X_train, y_train, X_test, y_test, treeCount, multivariate, filtering, trainFile)
+    train_df, test_df = import_data(trainFile, testFile)
+    X_train, y_train, X_test, y_test = split_data(train_df, test_df)
+
+    classifier = PBC4cip()
+    patterns = classifier.fit(X_train, y_train)
+
+    y_test_scores = classifier.score_samples(X_test)
+
+    y_pred = classifier.predict(y_test_scores)
+    confusion, acc, auc = score(y_pred, y_test)
+    
+    
     #WritePatternsCSV(patterns, trainFile, outputDirectory)
     #WritePatternsBinary(patterns, trainFile, outputDirectory)
-    #WriteResultsCSV(confusion, acc, auc, len(patterns), testFile, outputDirectory, resultsId, filtering)
+    WriteResultsCSV(confusion, acc, auc, len(patterns), testFile, outputDirectory, resultsId, filtering)
     show_results(confusion, acc, auc, len(patterns))
+
+    #convert_dat_to_csv(trainFile)
+    #convert_dat_to_csv(testFile)
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -107,7 +159,7 @@ def Execute(args):
 
     for f in tra:
         tra.set_description(f"Working from {training_files[f]}")
-        runPBC4cip(training_files[f], args.output_directory, args.tree_count, args.multivariate,
+        test_PBC4cip(training_files[f], args.output_directory, args.tree_count, args.multivariate,
             args.filtering,  testing_files[f], resultsId, args.delete_binary )
 
 

@@ -40,6 +40,27 @@ def ReadDAT(file):
                 new_file.write(newline)
     return ReadAndDeleteARFF(new_f)
 
+def convert_dat_to_csv(file):
+    f = open(file).readlines()
+    new_f = str(file[0:len(file)-4]+'.csv')
+    column_names = []
+    with open(new_f, 'w') as new_file:
+        for line in f:
+            if line != '\n':
+                newline = line
+                if newline.split()[0] == '@outputs' or newline.split()[0] == '@attribute' or newline.split()[0] == '@relation' \
+                or newline.split()[0] == '@data' or newline.split()[0] == '@relation':
+                    continue
+                elif newline.split()[0] == '@inputs':
+                    newline = newline.replace(
+                        '@inputs', ''
+                    ).replace(' ', '').replace('\n','')
+                    newline = newline + ',Class\n'
+                else :
+                    newline.replace(' ', '')
+                new_file.write(newline)
+    return None
+
 
 def ReadPatternsBinary(originalFile, outputDirectory, delete, suffix=None):
     patterns = list()

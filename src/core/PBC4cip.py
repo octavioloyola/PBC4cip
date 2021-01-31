@@ -23,7 +23,6 @@ class PBC4cip:
             self.__filterer = filterer
         else:
             self.__filterer = None
-        self.__filterer = None
         self.__multivariate = multivariate
         self.__treeCount = tree_count
         if file_dataset is not None:

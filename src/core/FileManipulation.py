@@ -48,13 +48,13 @@ def convert_dat_to_csv(file):
         for line in f:
             if line != '\n':
                 newline = line
-                if newline.split()[0] == '@outputs' or newline.split()[0] == '@attribute' or newline.split()[0] == '@relation' \
-                or newline.split()[0] == '@data' or newline.split()[0] == '@relation':
+                if newline.split()[0] == '@outputs' or newline.split()[0] == '@output' or newline.split()[0] == '@attribute' \
+                or newline.split()[0] == '@relation' or newline.split()[0] == '@data' or newline.split()[0] == '@relation':
                     continue
-                elif newline.split()[0] == '@inputs':
+                elif newline.split()[0] == '@inputs' or newline.split()[0] == '@input':
                     newline = newline.replace(
-                        '@inputs', ''
-                    ).replace(' ', '').replace('\n','')
+                        '@inputs', '@input'
+                    ).replace('@input', '').replace(' ', '').replace('\n','')
                     newline = newline + ',Class\n'
                 else :
                     newline.replace(' ', '')

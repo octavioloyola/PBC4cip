@@ -69,6 +69,24 @@ def score(predicted, y):
 
         return confusion, acc, auc
 
+def score_txtfile(predicted, y, dataset):
+    real = list(map(lambda instance: dataset.GetClassValue(instance), y))
+    numClasses = len(dataset.Class[1])
+    confusion = [[0]*2 for i in range(numClasses)]
+    classified_as = 0
+    error_count = 0
+
+    for i in range(len(real)):
+        if real[i] != predicted[i]:
+            error_count = error_count + 1
+        confusion[real[i]][predicted[i]] = confusion[real[i]][predicted[i]] + 1
+
+    acc = 100.0 * (len(real) - error_count) / len(real)
+    auc = obtainAUCMulticlass(confusion, numClasses)
+
+    return confusion, acc, auc
+
+
 def show_results(confusion, acc, auc, numPatterns):
     print()
     for i in range(len(confusion[0])):
@@ -87,17 +105,22 @@ def Train_and_test(X_train, y_train, X_test, y_test, treeCount, multivariate, fi
     
     return patterns, confusion, acc, auc
 
-def test_PBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering, testFile, resultsId, delete):    
+def test_PBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering, testFile, resultsId, delete): 
+    
+    #Uncomment this to work with text files instead of dataframes  
     """
     X_train, y_train = returnX_y(trainFile)
     X_test, y_test = returnX_y(testFile)
-    #patterns, confusion, acc, auc = Train_and_test(X_train, y_train, X_test, y_test, treeCount, multivariate, filtering)
+    file_dataset = FileDataset(trainFile)
+    classifier = PBC4cip(tree_count=treeCount, multivariate=multivariate, filtering=filtering, file_dataset=trainFile)
+    patterns = classifier.fit(X_train, y_train)
+    y_test_scores = classifier.score_samples(X_test)
+    y_pred = classifier.predict(y_test_scores)
+    confusion, acc, auc = score_txtfile(y_pred, y_test, FileDataset(trainFile))
     """
-    
     train_df, test_df = import_data(trainFile, testFile)
     X_train, y_train, X_test, y_test = split_data(train_df, test_df)
-
-    classifier = PBC4cip()
+    classifier = PBC4cip(tree_count=treeCount, multivariate=multivariate, filtering=filtering)
     patterns = classifier.fit(X_train, y_train)
 
     y_test_scores = classifier.score_samples(X_test)
@@ -105,14 +128,11 @@ def test_PBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering,
     y_pred = classifier.predict(y_test_scores)
     confusion, acc, auc = score(y_pred, y_test)
     
-    
-    #WritePatternsCSV(patterns, trainFile, outputDirectory)
-    #WritePatternsBinary(patterns, trainFile, outputDirectory)
+    WritePatternsCSV(patterns, trainFile, outputDirectory)
+    WritePatternsBinary(patterns, trainFile, outputDirectory)
     WriteResultsCSV(confusion, acc, auc, len(patterns), testFile, outputDirectory, resultsId, filtering)
     show_results(confusion, acc, auc, len(patterns))
 
-    #convert_dat_to_csv(trainFile)
-    #convert_dat_to_csv(testFile)
 
 def str2bool(v):
     if isinstance(v, bool):

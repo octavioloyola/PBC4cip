@@ -1,12 +1,12 @@
 import math
 import random
-from core.DecisionTree import DecisionTree, DecisionTreeNode
-from core.WinningSplitSelector import WinningSplitSelector
-from core.SplitIterator import SplitIterator
-from core.Helpers import CreateMembershipTupleList, FindDistribution, combine_instances
-from core.SplitIterator import SplitIteratorProvider, MultivariateSplitIteratorProvider
-from core.ForwardFeatureIterator import ForwardFeatureIterator
-from core.DistributionTester import PureNodeStopCondition, AlwaysTrue
+from .DecisionTree import DecisionTree, DecisionTreeNode
+from .WinningSplitSelector import WinningSplitSelector
+from .SplitIterator import SplitIterator
+from .Helpers import CreateMembershipTupleList, FindDistribution, combine_instances
+from .SplitIterator import SplitIteratorProvider, MultivariateSplitIteratorProvider
+from .ForwardFeatureIterator import ForwardFeatureIterator
+from .DistributionTester import PureNodeStopCondition, AlwaysTrue
 
 
 

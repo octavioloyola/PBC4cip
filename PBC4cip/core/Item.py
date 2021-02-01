@@ -1,5 +1,5 @@
-from core.FeatureSelectors import SingleFeatureSelector, CutPointSelector, MultipleValuesSelector, ValueAndComplementSelector, MultivariateCutPointSelector
-from core.Dataset import Dataset
+from .FeatureSelectors import SingleFeatureSelector, CutPointSelector, MultipleValuesSelector, ValueAndComplementSelector, MultivariateCutPointSelector
+from .Dataset import Dataset
 import math
 
 

@@ -1,9 +1,9 @@
 from copy import copy
-from core.Item import SubsetRelation
-from core.FilteredCollection import FilteredCollection
-from core.DecisionTreeBuilder import SelectorContext
-from core.Item import CutPointBasedBuilder, MultipleValuesBasedBuilder, ValueAndComplementBasedBuilder, MultivariateCutPointBasedBuilder
-from core.FeatureSelectors import CutPointSelector, MultipleValuesSelector, ValueAndComplementSelector, MultivariateCutPointSelector
+from .Item import SubsetRelation
+from .FilteredCollection import FilteredCollection
+from .DecisionTreeBuilder import SelectorContext
+from .Item import CutPointBasedBuilder, MultipleValuesBasedBuilder, ValueAndComplementBasedBuilder, MultivariateCutPointBasedBuilder
+from .FeatureSelectors import CutPointSelector, MultipleValuesSelector, ValueAndComplementSelector, MultivariateCutPointSelector
 from itertools import chain
 from collections import OrderedDict
 

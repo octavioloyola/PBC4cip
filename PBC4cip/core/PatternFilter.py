@@ -1,6 +1,6 @@
-from core.Item import SubsetRelation
-from core.EmergingPatterns import EmergingPatternComparer
-from core.Item import ItemComparer
+from .Item import SubsetRelation
+from .EmergingPatterns import EmergingPatternComparer
+from .Item import ItemComparer
 from tqdm import tqdm
 
 class MaximalPatternsGlobalFilter(object):

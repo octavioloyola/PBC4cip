@@ -5,15 +5,9 @@ import pandas as pd
 
 from tqdm import tqdm, trange
 from core.PBC4cip import PBC4cip
-from core.FileManipulation import WritePatternsBinary, WritePatternsCSV, ReadPatternsBinary, WriteClassificationResults
-from core.FileManipulation import WriteResultsCSV, returnX_y, get_dataframe_from_arff, GetFromFile
-from core.DecisionTreeBuilder import DecisionTreeBuilder, MultivariateDecisionTreeBuilder
-from core.PatternMiner import PatternMinerWithoutFiltering
-from core.PatternFilter import MaximalPatternsGlobalFilter
-from core.DistributionEvaluator import Hellinger, MultiClassHellinger, QuinlanGain
+from core.FileManipulation import WritePatternsBinary, WritePatternsCSV, WriteClassificationResults, WriteResultsCSV
 from core.Evaluation import obtainAUCMulticlass
-from core.Helpers import ArgMax, convert_to_ndarray, get_col_dist, get_idx_val
-from core.Dataset import Dataset, FileDataset, PandasDataset
+from core.Helpers import get_col_dist, get_idx_val
 from datetime import datetime
 
 def CheckSuffix(file, suffix):

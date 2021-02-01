@@ -1,6 +1,6 @@
 import math
 import copy
-from core.Helpers import ArgMax
+from .Helpers import ArgMax
 
 
 class BasicEvaluation(object):

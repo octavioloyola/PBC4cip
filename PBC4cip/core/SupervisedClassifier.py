@@ -1,5 +1,5 @@
-from core.DecisionTree import DecisionTree, DecisionTreeNode
-from core.Helpers import MultiplyBy, AddTo
+from .DecisionTree import DecisionTree, DecisionTreeNode
+from .Helpers import MultiplyBy, AddTo
 
 
 class DecisionTreeClassifier(object):

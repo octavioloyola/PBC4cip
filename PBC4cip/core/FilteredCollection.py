@@ -1,4 +1,4 @@
-from core.Item import SubsetRelation
+from .Item import SubsetRelation
 
 class FilteredCollection(object):
     def __init__(self, comparer, relationToFind, resultCollection=None):

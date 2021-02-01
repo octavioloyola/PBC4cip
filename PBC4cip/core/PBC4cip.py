@@ -1,15 +1,15 @@
 import math
 import numpy as np
 from io import StringIO, BytesIO
-from core.Helpers import ArgMax, convert_to_ndarray
-from core.DecisionTreeBuilder import DecisionTreeBuilder, MultivariateDecisionTreeBuilder
-from core.PatternMiner import PatternMinerWithoutFiltering
-from core.DistributionEvaluator import Hellinger, MultiClassHellinger, QuinlanGain
-from core.DistributionTester import PureNodeStopCondition, AlwaysTrue
-from core.Item import SubsetRelation
-from core.Dataset import Dataset, FileDataset, PandasDataset
-from core.Evaluation import CrispAndPartitionEvaluation, Evaluate, obtainAUCMulticlass
-from core.PatternFilter import MaximalPatternsGlobalFilter
+from .Helpers import ArgMax, convert_to_ndarray
+from .DecisionTreeBuilder import DecisionTreeBuilder, MultivariateDecisionTreeBuilder
+from .PatternMiner import PatternMinerWithoutFiltering
+from .DistributionEvaluator import Hellinger, MultiClassHellinger, QuinlanGain
+from .DistributionTester import PureNodeStopCondition, AlwaysTrue
+from .Item import SubsetRelation
+from .Dataset import Dataset, FileDataset, PandasDataset
+from .Evaluation import CrispAndPartitionEvaluation, Evaluate, obtainAUCMulticlass
+from .PatternFilter import MaximalPatternsGlobalFilter
 from tqdm import tqdm
 
 

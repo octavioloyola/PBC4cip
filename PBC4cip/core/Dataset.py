@@ -6,8 +6,8 @@ import pandas as pd
 import sys
 import numpy as np
 import pandas as pd
-from core.Helpers import get_col_dist
-from core.FileManipulation import ReadARFF, ReadDAT, GetFromFile, get_dataframe_from_arff
+from .Helpers import get_col_dist
+from .FileManipulation import ReadARFF, ReadDAT, GetFromFile, get_dataframe_from_arff
 
 class Dataset(ABC):
     @abstractmethod

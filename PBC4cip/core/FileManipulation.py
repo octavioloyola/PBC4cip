@@ -4,7 +4,6 @@ import pickle
 import csv
 from tqdm import tqdm
 from io import StringIO, BytesIO
-from core.Evaluation import Evaluate
 import pandas as pd
 
 

@@ -4,9 +4,9 @@ import warnings
 warnings.warn = warn
 
 import math
-from core.Helpers import FindDistribution, Substract
+from .Helpers import FindDistribution, Substract
 import operator
-from core.FeatureSelectors import CutPointSelector, MultipleValuesSelector, ValueAndComplementSelector, MultivariateCutPointSelector
+from .FeatureSelectors import CutPointSelector, MultipleValuesSelector, ValueAndComplementSelector, MultivariateCutPointSelector
 from copy import copy, deepcopy
 import numpy as np
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA

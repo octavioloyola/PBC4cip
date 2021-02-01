@@ -4,12 +4,12 @@ import pandas as pd
 from tqdm import tqdm
 from multiprocessing import Pool, freeze_support, cpu_count
 from functools import partial
-from core.SupervisedClassifier import DecisionTreeClassifier
-from core.RandomSampler import SampleWithoutRepetition
-from core.EmergingPatterns import EmergingPatternCreator, EmergingPatternComparer, EmergingPatternSimplifier
-from core.DistributionTester import AlwaysTrue
-from core.Item import ItemComparer, SubsetRelation
-from core.FilteredCollection import FilteredCollection
+from .SupervisedClassifier import DecisionTreeClassifier
+from .RandomSampler import SampleWithoutRepetition
+from .EmergingPatterns import EmergingPatternCreator, EmergingPatternComparer, EmergingPatternSimplifier
+from .DistributionTester import AlwaysTrue
+from .Item import ItemComparer, SubsetRelation
+from .FilteredCollection import FilteredCollection
 
 
 class PatternMinerWithoutFiltering:

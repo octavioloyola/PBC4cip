@@ -5,7 +5,7 @@ import pandas as pd
 
 from tqdm import tqdm, trange
 from core.PBC4cip import PBC4cip
-from core.FileManipulation import WritePatternsBinary, WritePatternsCSV, WriteClassificationResults, WriteResultsCSV
+from core.FileManipulation import WritePatternsBinary, WritePatternsCSV, WriteResultsCSV
 from core.Evaluation import obtainAUCMulticlass
 from core.Helpers import get_col_dist, get_idx_val
 from datetime import datetime
@@ -73,7 +73,7 @@ def test_PBC4cip(trainFile, testFile):
     patterns = classifier.fit(X_train, y_train)
 
     y_test_scores = classifier.score_samples(X_test)
-    #print(f"Test Scores: {y_test_scores}")
+    print(f"Test Scores: {y_test_scores}")
     
     y_pred = classifier.predict(y_test_scores)
     confusion, acc, auc = score(y_pred, y_test)

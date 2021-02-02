@@ -7,7 +7,7 @@ import sys
 import numpy as np
 import pandas as pd
 from .Helpers import get_col_dist
-from .FileManipulation import ReadARFF, ReadDAT, GetFromFile, get_dataframe_from_arff
+
 
 class Dataset(ABC):
     @abstractmethod
@@ -133,6 +133,7 @@ class PandasDataset(Dataset):
             
 
 class FileDataset(Dataset):
+    from .FileManipulation import ReadARFF, ReadDAT, GetFromFile, get_dataframe_from_arff
 
     def __init__(self, file):
         arffFile = GetFromFile(file)
@@ -250,7 +251,6 @@ class FeatureInformation(object):
     def __init__(self, dataset, feature):
         self.__Dataset = dataset
         self.__Feature = feature
-        #self.MissingValueCount = 0
         self.__MinValue = 0
         self.__MaxValue = 0
         self.__Distribution = []

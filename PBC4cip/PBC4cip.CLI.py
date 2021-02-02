@@ -5,7 +5,7 @@ import pandas as pd
 
 from tqdm import tqdm, trange
 from core.PBC4cip import PBC4cip
-from core.FileManipulation import WritePatternsBinary, WritePatternsCSV, ReadPatternsBinary, WriteClassificationResults
+from core.FileManipulation import WritePatternsBinary, WritePatternsCSV, ReadPatternsBinary
 from core.FileManipulation import WriteResultsCSV, returnX_y, get_dataframe_from_arff, GetFromFile, convert_dat_to_csv
 from core.DecisionTreeBuilder import DecisionTreeBuilder, MultivariateDecisionTreeBuilder
 from core.PatternMiner import PatternMinerWithoutFiltering
@@ -106,7 +106,6 @@ def Train_and_test(X_train, y_train, X_test, y_test, treeCount, multivariate, fi
     return patterns, confusion, acc, auc
 
 def test_PBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering, testFile, resultsId, delete): 
-    
     #Uncomment this to work with text files instead of dataframes  
     """
     X_train, y_train = returnX_y(trainFile)
@@ -124,6 +123,7 @@ def test_PBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering,
     patterns = classifier.fit(X_train, y_train)
 
     y_test_scores = classifier.score_samples(X_test)
+    
 
     y_pred = classifier.predict(y_test_scores)
     confusion, acc, auc = score(y_pred, y_test)

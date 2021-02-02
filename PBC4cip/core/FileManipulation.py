@@ -1,4 +1,3 @@
-import arff
 import os
 import pickle
 import csv
@@ -8,6 +7,7 @@ import pandas as pd
 
 
 def ReadARFF(file):
+    import arff
     return arff.loads(open(file))
 
 
@@ -142,45 +142,6 @@ def WritePatternsCSV(patterns, originalFile, outputDirectory, suffix=None):
 
     return name
 
-
-def WriteClassificationResults(evaluation, acc, auc, originalFile, outputDirectory, suffix=None):
-    if not evaluation:
-        return ""
-    if not suffix:
-        suffix = ""
-    if not os.path.exists(outputDirectory):
-        print(f"Creating output directory: {outputDirectory}")
-        os.makedirs(outputDirectory)
-
-    name = os.path.splitext(os.path.basename(originalFile))[0]
-    basename = name[:len(name)-len(suffix)]
-    name = os.path.join(
-        outputDirectory, name[:len(name)-len(suffix)]+'_results.md')
-
-    if os.path.exists(name):
-        os.remove(name)
-
-    results_out = open(name, "a", newline='\n', encoding='utf-8')
-    results_out.write(f"# Results for the testing dataset [{basename}]")
-    results_out.write(f"\r\n\r\n")
-    results_out.write(f"## Confusion Matrix \r\n\r\n")
-    results_out.write(f"{evaluation.ConfusionMatrix.__repr__()}")
-    results_out.write(f"## Measures per class")
-    for classValue in range(len(evaluation.ConfusionMatrix.Classes)):
-        auc = evaluation.ConfusionMatrix.AUCMeasure(classValue)
-        basicEvaluation = evaluation.ConfusionMatrix.ComputeBasicEvaluation(
-            classValue)
-        classLabel = evaluation.ConfusionMatrix.Classes[classValue]
-        results_out.write(f"\r\n\r\n")
-        results_out.write(f"### [{classLabel}]\r\n\r\n")
-        results_out.write(f"- TP Rate: {basicEvaluation.TPrate}\r\n\r\n")
-        results_out.write(f"- FP Rate: {basicEvaluation.FPrate}\r\n\r\n")
-        results_out.write(f"- AUC: {auc}")
-    results_out.close()
-
-    return name
-
-
 def WriteResultsCSV(confusion, acc, auc, numPatterns, originalFile, outputDirectory, resultsId, filtering):
     if not os.path.exists(outputDirectory):
         print(f"Creating output directory: {outputDirectory}")
@@ -221,13 +182,6 @@ def returnX_y(file):
         arff_file = GetFromFile(file)
         instancesDf = get_dataframe_from_arff(arff_file)
         instances = instancesDf.to_numpy()
-        X = instances[:, 0:len(instances[0])-1]
-        y = instances[:, len(instances[0])-1 : len(instances[0])]
-        return X,y
-    
-def returnX_y_pandas(df):
-        
-        instances = df.to_numpy()
         X = instances[:, 0:len(instances[0])-1]
         y = instances[:, len(instances[0])-1 : len(instances[0])]
         return X,y

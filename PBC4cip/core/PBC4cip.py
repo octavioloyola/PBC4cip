@@ -121,7 +121,8 @@ class PBC4cip:
         else:
             return self.__classDistribution
     
-    def predict(self, scored_samples):
+    def predict(self, X):
+        scored_samples = self.score_samples(X)  
         predicted = [ArgMax(instance) for instance in scored_samples]
         return predicted
     

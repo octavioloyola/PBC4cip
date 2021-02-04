@@ -1,13 +1,21 @@
 # PBC4cip
-PBC4cip is a machine learning package used to handle class imbalanced prediction problems.
+PBC4cip is a machine learning classifier package based on contrast patterns used to handle class imbalance problems.
 
 ## Built With
 
 * [Pandas](https://pandas.pydata.org) - DataFrame framework
-* [Numpy](https://numpy.org) - Numpy Library
+* [Numpy](https://numpy.org) - Array computation package
 * [tqdm](https://tqdm.github.io/) - Progress bar helper
 
 ## Getting Started
-To have an idea on how to run the program just see the example located in PBC4cip/TestProg.py
+* You can install PBC4cip as a python package with pip by using [pip install PBC4cip](https://pypi.org/project/PBC4cip/).
+* An example of how to run PBC4cip with csv training and testing files can be found in [PBC4cip/TestProg.py](https://github.com/octavioloyola/PBC4cip/blob/master/PBC4cip/example/example.py)
+* This example file can be ran from the directory where you cloned this repository with python -m example.example 
 
-There are various command line arguments that can be passed to the program, these can be found by running python src/PBC4cip.CLI.py --help.
+
+## More Information
+This project expands on the code originally made by José René White Enciso, [available here](https://github.com/jrenewhite/PBC4cip)
+
+Additional information regarding PBC4cip can be found in its original article:
+
+Loyola-González, O., Medina-Pérez, M. A., Martínez-Trinidad, J. F., Carrasco-Ochoa, J. A., Monroy, R., & García-Borroto, M. (2017). "[PBC4cip: A new contrast pattern-based classifier for class imbalance problems.](https://doi.org/10.1016/j.knosys.2016.10.018)" *Knowledge-Based Systems, 115*, 100-109

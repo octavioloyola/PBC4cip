@@ -7,20 +7,112 @@ import sys
 import numpy as np
 import pandas as pd
 from .Helpers import get_col_dist
-
+from .FileManipulation import GetFromFile, get_dataframe_from_arff
 
 class Dataset(ABC):
+
+    @property
     @abstractmethod
-    def GetAttribute(self, attribute):
+    def Instances(self):
         pass
+
+    @property
+    def Attributes(self):
+        return list(
+            filter(lambda attr: attr[0].strip().lower() != 'class', self.Model))
+
+    @property
+    def Class(self):
+        return list(
+            filter(lambda attr: attr[0].strip().lower() == 'class', self.Model))[0]
+
+    @property
+    def AttributesInformation(self):
+        return list(
+            map(lambda attr: FeatureInformation(self, attr), self.Attributes))
+
+    @property
+    def ClassInformation(self):
+        return FeatureInformation(self, self.Class)
+
+    def GetAttribute(self, attribute):
+        return list(filter(lambda attr: attr[0] == attribute, self.Model))[0]
+
+    def GetAttributeNames(self):
+        return list(
+            map(lambda attribute: attribute[0], self.Model))
+    
+    def GetNominalValues(self, feature):
+        attribute = list(
+            filter(lambda attr: attr[0].lower() == feature.lower(), self.Model))
+
+        if isinstance(attribute[0][1], list):
+            return attribute[0][1]
+        else:
+            return None
+
+    def GetValueOfIndex(self, feature, index):
+        values = self.GetNominalValues(feature)
+        if not values:
+            return None
+        else:
+            return values[index]
+
+    def GetIndexOfValue(self, feature, value):
+        values = self.GetNominalValues(feature)
+        if not values:
+            return -1
+        else:
+            return values.index(value)
+
+    def GetClasses(self):
+        return self.GetNominalValues('class')
+
+    def GetClassIdx(self):
+        return self.GetFeatureIdx(self.Class)
+
+    def GetFeatureIdx(self, feature):
+        return self.Model.index(feature)
+    
+    def IsNominalFeature(self, feature):
+        if isinstance(feature[1], str) and feature[1].lower() == 'string':
+            raise Exception("String attributes are not supported!")
+        return isinstance(feature[1], list)
+
+    def GetFeatureValue(self, feature, instance):
+        if isinstance(feature[1], list):
+            return self.GetIndexOfValue(feature[0], instance[self.GetFeatureIdx(feature)])
+        elif feature[1].lower() in ['numeric', 'real', 'integer']:
+            return instance[self.GetFeatureIdx(feature)]
+        else:
+            raise Exception(
+                "Attribute must be either nominal, numeric, real or integer")
+    
+    def GetClassValue(self, y_instance):
+        return self.GetIndexOfValue(self.Class[0], y_instance[0])
+
+    def IsMissing(self, feature, instance):
+        value = self.GetFeatureValue(feature, instance)
+
+        if self.IsNominalFeature(feature):
+            return value < 0
+        else:
+            return (not value or value == math.nan)   
 
 class PandasDataset(Dataset):
     def __init__(self, X,y):
+        super()
         self.Model = self.get_model_list(X,y)
-        self.Instances = self.combine_X_y(X,y)
+        self.__Instances = self.combine_X_y(X,y)
+    
+    @property
+    def Instances(self):
+        return self.__Instances
+    
+    @Instances.setter
+    def Instances(self, new_instances):
+        self.__Instances = new_instances
 
-    def GetAttribute(self, attribute):
-        pass
     def get_feature_info(self, feature):
         if self.get_feature_col_type(feature) == 'Nominal':
             return get_col_dist(feature)
@@ -47,95 +139,11 @@ class PandasDataset(Dataset):
         instances_df = X.copy(deep=True)
         instances_df[f'{y_name}'] = y[f'{y_name}']
         return instances_df.values
-
-    @property
-    def Attributes(self):
-        return list(
-            filter(lambda attr: attr[0].strip().lower() != 'class', self.Model))
-
-    @property
-    def Class(self):
-        return list(
-            filter(lambda attr: attr[0].strip().lower() == 'class', self.Model))[0]
-
-    @property
-    def AttributesInformation(self):
-        return list(
-            map(lambda attr: FeatureInformation(self, attr), self.Attributes))
-
-    @property
-    def ClassInformation(self):
-        return FeatureInformation(self, self.Class)
-
-    def GetAttribute(self, attribute):
-        return list(filter(lambda attr: attr[0] == attribute, self.Model))[0]
-
-    def GetAttributeNames(self):
-        return list(
-            map(lambda attribute: attribute[0], self.Model))
-
-    def GetNominalValues(self, feature):
-        attribute = list(
-            filter(lambda attr: attr[0].lower() == feature.lower(), self.Model))
-
-        if isinstance(attribute[0][1], list):
-            return attribute[0][1]
-        else:
-            return None
-
-    def GetValueOfIndex(self, feature, index):
-        values = self.GetNominalValues(feature)
-        if not values:
-            return None
-        else:
-            return values[index]
-
-    def GetIndexOfValue(self, feature, value):
-        values = self.GetNominalValues(feature)
-        if not values:
-            return -1
-        else:
-            return values.index(value)
-
-    def GetClasses(self):
-        return self.GetNominalValues('class')
-
-    def GetClassIdx(self):
-        return self.GetFeatureIdx(self.Class)
-
-    def GetFeatureIdx(self, feature):
-        return self.Model.index(feature)
-
-    def IsNominalFeature(self, feature):
-        if isinstance(feature[1], str) and feature[1].lower() == 'string':
-            raise Exception("String attributes are not supported!")
-        return isinstance(feature[1], list)
-
-    def GetFeatureValue(self, feature, instance):
-        if isinstance(feature[1], list):
-            return self.GetIndexOfValue(feature[0], instance[self.GetFeatureIdx(feature)])
-        elif feature[1].lower() in ['numeric', 'real', 'integer']:
-            return instance[self.GetFeatureIdx(feature)]
-        else:
-            raise Exception(
-                "Attribute must be either nominal, numeric, real or integer")
-    
-    def GetClassValue(self, y_instance):
-        return self.GetIndexOfValue(self.Class[0], y_instance[0])
-
-    def IsMissing(self, feature, instance):
-        value = self.GetFeatureValue(feature, instance)
-
-        if self.IsNominalFeature(feature):
-            return value < 0
-        else:
-            return (not value or value == math.nan)   
             
 
 class FileDataset(Dataset):
-    from .FileManipulation import ReadARFF, ReadDAT, GetFromFile, get_dataframe_from_arff
-
     def __init__(self, file):
+        super()
         arffFile = GetFromFile(file)
 
         attributes = arffFile['attributes']
@@ -153,89 +161,10 @@ class FileDataset(Dataset):
     @property
     def Instances(self):
         return self.__Instances
-
-    @property
-    def Attributes(self):
-        return list(
-            filter(lambda attr: attr[0].strip().lower() != 'class', self.Model))
-
-    @property
-    def Class(self):
-        return list(
-            filter(lambda attr: attr[0].strip().lower() == 'class', self.Model))[0]
-
-    @property
-    def AttributesInformation(self):
-        return list(
-            map(lambda attr: FeatureInformation(self, attr), self.Attributes))
-
-    @property
-    def ClassInformation(self):
-        return FeatureInformation(self, self.Class)
-
-    def GetAttribute(self, attribute):
-        return list(filter(lambda attr: attr[0] == attribute, self.Model))[0]
-
-    def GetAttributeNames(self):
-        return list(
-            map(lambda attribute: attribute[0], self.Model))
-
-    def GetNominalValues(self, feature):
-        attribute = list(
-            filter(lambda attr: attr[0].lower() == feature.lower(), self.Model))
-
-        if isinstance(attribute[0][1], list):
-            return attribute[0][1]
-        else:
-            return None
-
-    def GetValueOfIndex(self, feature, index):
-        values = self.GetNominalValues(feature)
-        if not values:
-            return None
-        else:
-            return values[index]
-
-    def GetIndexOfValue(self, feature, value):
-        values = self.GetNominalValues(feature)
-        if not values:
-            return -1
-        else:
-            return values.index(value)
-
-    def GetClasses(self):
-        return self.GetNominalValues('class')
-
-    def GetClassIdx(self):
-        return self.GetFeatureIdx(self.Class)
-
-    def GetFeatureIdx(self, feature):
-        return self.Model.index(feature)
-
-    def IsNominalFeature(self, feature):
-        if isinstance(feature[1], str) and feature[1].lower() == 'string':
-            raise Exception("String attributes are not supported!")
-        return isinstance(feature[1], list)
-
-    def GetFeatureValue(self, feature, instance):
-        if isinstance(feature[1], list):
-            return self.GetIndexOfValue(feature[0], instance[self.GetFeatureIdx(feature)])
-        elif feature[1].lower() in ['numeric', 'real', 'integer']:
-            return instance[self.GetFeatureIdx(feature)]
-        else:
-            raise Exception(
-                "Attribute must be either nominal, numeric, real or integer")
     
-    def GetClassValue(self, y_instance):
-        return self.GetIndexOfValue(self.Class[0], y_instance[0])
-
-    def IsMissing(self, feature, instance):
-        value = self.GetFeatureValue(feature, instance)
-
-        if self.IsNominalFeature(feature):
-            return value < 0
-        else:
-            return (not value or value == math.nan)
+    @Instances.setter
+    def Instances(self, new_instances):
+        self.__Instances = new_instances
 
     def ScalarProjection(self, instance, features, weights):
 
@@ -307,5 +236,3 @@ class FeatureInformation(object):
             else:
                 self.MinValue = 0
                 self.MaxValue = 0
-            
-

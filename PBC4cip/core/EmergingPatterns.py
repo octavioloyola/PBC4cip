@@ -106,7 +106,7 @@ class EmergingPattern(object):
         return ' AND '.join(map(lambda item: item.__repr__(), self.Items))
 
     def SupportInfo(self):
-        return ' '.join(map(lambda count, support, className: f"{className} count: {str(count)} support: [{str(round(support,2))}] ", self.Counts, self.Supports, self.Dataset.Class[1]))
+        return ' '.join(map(lambda count, support, className: f"{className} count: {str(count)} support: {str(round(support,2) * 100)}% ", self.Counts, self.Supports, self.Dataset.Class[1]))
 
     def ToString(self):
         dictOfPatterns = {"Pattern": self.BaseRepresentation()}

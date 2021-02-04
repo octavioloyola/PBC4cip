@@ -114,7 +114,7 @@ def test_PBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering,
     classifier = PBC4cip(tree_count=treeCount, multivariate=multivariate, filtering=filtering, file_dataset=trainFile)
     patterns = classifier.fit(X_train, y_train)
     y_test_scores = classifier.score_samples(X_test)
-    y_pred = classifier.predict(y_test_scores)
+    y_pred = classifier.predict(X_test)
     confusion, acc, auc = score_txtfile(y_pred, y_test, FileDataset(trainFile))
     """
     train_df, test_df = import_data(trainFile, testFile)
@@ -124,8 +124,7 @@ def test_PBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering,
 
     y_test_scores = classifier.score_samples(X_test)
     
-
-    y_pred = classifier.predict(y_test_scores)
+    y_pred = classifier.predict(X_test)
     confusion, acc, auc = score(y_pred, y_test)
     
     WritePatternsCSV(patterns, trainFile, outputDirectory)

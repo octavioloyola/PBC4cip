@@ -97,7 +97,17 @@ class Dataset(ABC):
         if self.IsNominalFeature(feature):
             return value < 0
         else:
-            return (not value or value == math.nan)   
+            return (not value or value == math.nan)
+
+    def ScalarProjection(self, instance, features, weights):
+
+        if len(list(filter(lambda feature: self.IsMissing(feature, instance), features))) > 0:
+            return math.nan
+
+        result = sum([weights[feature] * self.GetFeatureValue(feature, instance)
+                      for feature in features])
+
+        return result   
 
 class PandasDataset(Dataset):
     def __init__(self, X,y):
@@ -165,16 +175,6 @@ class FileDataset(Dataset):
     @Instances.setter
     def Instances(self, new_instances):
         self.__Instances = new_instances
-
-    def ScalarProjection(self, instance, features, weights):
-
-        if len(list(filter(lambda feature: self.IsMissing(feature, instance), features))) > 0:
-            return math.nan
-
-        result = sum([weights[feature] * self.GetFeatureValue(feature, instance)
-                      for feature in features])
-
-        return result
 
 class FeatureInformation(object):
     def __init__(self, dataset, feature):

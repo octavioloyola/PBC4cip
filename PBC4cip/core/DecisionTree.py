@@ -65,6 +65,13 @@ class DecisionTreeNode():
     def IsLeaf(self):
         return (not self.Children or len(self.Children) == 0)
 
+    @property
+    def ChildSelector(self):
+        return self.__ChildSelector
+    @ChildSelector.setter
+    def ChildSelector(self, new_child_selector):
+        self.__ChildSelector = new_child_selector
+
     def __format__(self, ident):
         result = self.__repr__()
 

@@ -23,9 +23,6 @@ class EmergingPattern(object):
     @property
     def Dataset(self):
         return self.__Dataset
-    @Dataset.setter
-    def Dataset(self, new_dataset):
-        self.__Dataset = new_dataset
     
     @property
     def Model(self):
@@ -136,9 +133,6 @@ class EmergingPatternCreator(object):
     @property
     def Dataset(self):
         return self.__Dataset
-    @Dataset.setter
-    def Dataset(self, new_dataset):
-        self.__Dataset = new_dataset
 
     def __Create(self, contexts):
         pattern = EmergingPattern(self.Dataset)

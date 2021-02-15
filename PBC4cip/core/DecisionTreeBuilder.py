@@ -8,8 +8,6 @@ from .SplitIterator import SplitIteratorProvider, MultivariateSplitIteratorProvi
 from .ForwardFeatureIterator import ForwardFeatureIterator
 from .DistributionTester import PureNodeStopCondition, AlwaysTrue
 
-
-
 class DecisionTreeBuilder():
     def __init__(self, dataset, X, y):
         self.__MinimalInstanceMembership = 0.05
@@ -18,7 +16,6 @@ class DecisionTreeBuilder():
         self.__MaxDepth = -1
         self.__PruneResult = False
         self.__Dataset = dataset
-        self.idk = X
         self.__trainInstances = combine_instances(X, y)
         self.__FeatureCount = 0
         self.__StopCondition = PureNodeStopCondition
@@ -45,6 +42,9 @@ class DecisionTreeBuilder():
     @property
     def SplitIteratorProvider(self):
         return self.__SplitIteratorProvider
+    @SplitIteratorProvider.setter
+    def SplitIteratorProvider(self, new_split_iterator_provider):
+        self.__SplitIteratorProvider = new_split_iterator_provider
     
     @property
     def MinimalSplitGain(self):
@@ -56,9 +56,6 @@ class DecisionTreeBuilder():
     @property
     def Dataset(self):
         return self.__Dataset
-    @Dataset.setter
-    def Dataset(self, new_dataset):
-        self.__Dataset = new_dataset
 
     @property
     def trainInstances(self):
@@ -166,12 +163,13 @@ class SelectorContext():
 
 class MultivariateDecisionTreeBuilder(DecisionTreeBuilder):
     def __init__(self, dataset, X, y):
-        super().__init__(dataset)
+        super().__init__(dataset, X, y)
         self.MinimalForwardGain = 0
-        self.__trainInstances = combine_instances(X, y)
+        #self.__trainInstances = combine_instances(X, y)
         self.WMin = 0  # Minimal absolute value for each weight after normalizing
-        self.SplitIteratorProvider = MultivariateSplitIteratorProvider(
-            self.Dataset)
+        self.SplitIteratorProvider = MultivariateSplitIteratorProvider(self.Dataset)
+    
+    
 
     def Build(self):
         if self.MinimalSplitGain <= 0:
@@ -199,12 +197,17 @@ class MultivariateDecisionTreeBuilder(DecisionTreeBuilder):
 
         return result
 
-    def FillNode(self, node, instanceTuples, level, currentContext):
+    def __FillNode(self, node, instanceTuples, level, currentContext):
+        print(f"A node is being filled: context: {currentContext} len: {len(currentContext)}")
+        print(f"Data of the node: {node} ")
         if self.StopCondition(node.Data, self.Dataset.Model, self.Dataset.Class):
+            print(f"returned FillNode stopCondition")
             return
         if self.MaxDepth >= 0 and level >= self.MaxDepth - 1:
+            print(f"return FillNode MaxDepth")
             return
         if sum(node.Data) <= self.MinimalObjByLeaf:
+            print(f"return FillNode MinimalObjByLeaf")
             return
 
         whichBetterToFind = 1
@@ -216,29 +219,43 @@ class MultivariateDecisionTreeBuilder(DecisionTreeBuilder):
         bestFeature = None
 
         for feature in sampleFeatures:
+            if node.Data[0] == 124.0:
+                print(f"124 feature: {feature}")
             splitIterator = self.SplitIteratorProvider.GetSplitIterator(
                 feature)
+            #print(f"splitIterator: {splitIterator}")
             if not splitIterator:
                 raise Exception(f"Undefined iterator for feature {feature}")
+            #print(f"ABout to init splitIterator")
+            if node.Data[0] == 124.0:
+                print(f"instanceTuples: {instanceTuples}")
             splitIterator.Initialize(instanceTuples)
             while splitIterator.FindNext():
                 currentGain = self._distributionEvaluator(node.Data, splitIterator.CurrentDistribution)
+                if node.Data[0] == 124.0:
+                    print(f"124 currentGain: {currentGain}")
+                #print(f"currentGain: {currentGain}")
                 if currentGain >= self.MinimalSplitGain:
                     if winningSplitSelector.EvaluateThis(
                             currentGain, splitIterator, level):
                         bestFeature = self.Dataset.GetAttribute(feature)
+                        print(f"best feature: {bestFeature}")
 
 
         if bestFeature is not None and not self.Dataset.IsNominalFeature(bestFeature):
+            print(f"\n\n Forward Feature selec: feat: {bestFeature}")
             sampleFeatures = list(filter(lambda feature: not self.Dataset.IsNominalFeature(
                 feature), [self.Dataset.GetAttribute(feature) for feature in sampleFeatures]))
+            print(f"sampleFeatures: {sampleFeatures}")
             featureIterator = ForwardFeatureIterator(
                 self.Dataset, sampleFeatures)
             featureIterator.Add(bestFeature)
+            print(f"candidateFeaturesSize: {len(featureIterator.CandidateFeatures)}")
             while featureIterator.FeaturesRemain:
                 bestFeature = None
                 for features in featureIterator.GetFeatures():
                     candidateFeature = features[0]
+                    print(f"\ncandidateFeat: {candidateFeature}")
 
                     splitIterator = self.SplitIteratorProvider.GetMultivariateSplitIterator(
                         features, self.WMin)
@@ -246,8 +263,10 @@ class MultivariateDecisionTreeBuilder(DecisionTreeBuilder):
                         raise Exception(
                             f"Undefined iterator for features {','.join(map(lambda feature: feature[0],features))}")
 
+                    print(f"About to initialize multivariate splitIterator")
                     valid = splitIterator.InitializeMultivariate(
                         instanceTuples, node)
+                    print(f"valid: {valid}")
 
                     if not valid:
                         break
@@ -255,10 +274,15 @@ class MultivariateDecisionTreeBuilder(DecisionTreeBuilder):
                     while splitIterator.FindNext():
                         currentGain = self._distributionEvaluator(
                             node.Data, splitIterator.CurrentDistribution)
+                        print(f"currentGain ForwardFeature: {currentGain}")
                         if currentGain >= self.MinimalSplitGain and (currentGain - winningSplitSelector.MinStoredValue) >= self.MinimalForwardGain:
                             if winningSplitSelector.EvaluateThis(currentGain, splitIterator, level):
+                                print(f"bestFeature is {candidateFeature}")
                                 bestFeature = candidateFeature
-                if not bestFeature:
+                        #else:
+                            #print(f"currGain: {currentGain} minStored: {winningSplitSelector.MinStoredValue}= {currentGain - winningSplitSelector.MinStoredValue} >= {self.MinimalForwardGain}")
+                if bestFeature is None:
+                    print(f"bestFeature: {bestFeature} break")
                     break
                 else:
                     featureIterator.Add(bestFeature)
@@ -267,6 +291,7 @@ class MultivariateDecisionTreeBuilder(DecisionTreeBuilder):
             maxSelector = winningSplitSelector.WinningSelector
             node.ChildSelector = maxSelector
             node.Children = list()
+            print(f"maxSelectorChildrenCount: {maxSelector.ChildrenCount}")
             instancesPerChildNode = CreateChildrenInstances(
                 instanceTuples, maxSelector, self.MinimalInstanceMembership)
 

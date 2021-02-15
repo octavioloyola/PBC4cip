@@ -11,6 +11,8 @@ from copy import copy, deepcopy
 import numpy as np
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 
+from .FakeProjections import get_fakes
+
 class SplitIteratorProvider(object):
     def __init__(self, dataset):
         self.Dataset = dataset
@@ -37,9 +39,6 @@ class SplitIterator(object):
     @property
     def Dataset(self):
         return self.__Dataset
-    @Dataset.setter
-    def Dataset(self, new_dataset):
-        self.__Dataset = new_dataset
     
     @property
     def Model(self):
@@ -106,6 +105,7 @@ class NumericSplitIterator(SplitIterator):
         super().Initialize(instances)
 
         self._initialized = True
+        print(f"Init numericSplit")
 
         if self.Dataset.IsNominalFeature(self.Feature):
             raise Exception("Cannot use this iterator on non-numeric feature")
@@ -119,12 +119,14 @@ class NumericSplitIterator(SplitIterator):
                 f"Feature type {self.Feature[1]} is not considered")
 
         instList = list(instances)
+        print(f"instListlen: {len(instList)}")
         self.__sortedInstances = list(
             filter(lambda element: not self.IsMissing(element[0]), instList))
 
         sortedInsts = sorted(instList, key=lambda element: element[0][self.GetFeatureIdx()])
         self.__sortedInstances = sortedInsts
-
+        
+        #print(f"sortedInstances: {self.__sortedInstances}")
 
         self.CurrentDistribution[0] = [0]*self._numClasses
         self.CurrentDistribution[1] = FindDistribution(
@@ -139,7 +141,9 @@ class NumericSplitIterator(SplitIterator):
 
     def FindNext(self):
         super().FindNext()
+        print(f"currentIndex: {self.__currentIndex} >= sortedInstLen: {len(self.__sortedInstances) -1}")
         if (self.__currentIndex >= len(self.__sortedInstances) - 1):
+            print(f"cursed at start")
             return False
 
         self.__currentIndex += 1
@@ -157,6 +161,7 @@ class NumericSplitIterator(SplitIterator):
                     self.__lastClassValue = nextClassValue
                     return True
             self.__currentIndex += 1
+        print(f"cursted at end")
         return False
 
     def CreateCurrentChildSelector(self):
@@ -285,8 +290,9 @@ class MultivariateSplitIterator(SplitIterator):
     def FindNext(self):
         super().FindNext()
 
-
+deleteIdx = 0
 class MultivariateOrderedFeatureSplitIterator(MultivariateSplitIterator):
+    
     def __init__(self, dataset, features):
         super().__init__(dataset, features)
         self.__filteredInstances = None
@@ -299,18 +305,36 @@ class MultivariateOrderedFeatureSplitIterator(MultivariateSplitIterator):
         self.__weights = None
         self.WMin = None
 
+    
     def InitializeMultivariate(self, instances, node):
+        global deleteIdx
+        print(f"Initialize SplitIterator: features {self.Features} instanceslen: {len(instances)}")
+        #TODO: sort the features
         super().InitializeMultivariate(instances, node)
+        self.__cuttingStrategy = self.NumericOnPoint
 
-        if not self.__cuttingStrategy:
-            self.__cuttingStrategy = self.NumericOnPoint
-        else:
-            self.__cuttingStrategy = self.NumericCenterBetweenPoints
+        #if not self.__cuttingStrategy:
+            #self.__cuttingStrategy = self.NumericOnPoint
+        #else:
+            #self.__cuttingStrategy = self.NumericCenterBetweenPoints
+        
+        self.Features.sort(key=lambda x: self.Dataset.GetFeatureIdx(x))
+        print(f"Sorted features: {self.Features}")
 
         self.__filteredInstances = list(
-            filter(lambda instance: not any(self.Dataset.IsMissing(feature, instance[0]) for feature in self.Features), instances))
+            #filter(lambda instance: not any(self.Dataset.IsMissing(feature, instance[0]) for feature in self.Features), instances))
+            filter(lambda instance: not any(math.isnan(self.Dataset.GetFeatureValue(feature, instance[0])) for feature in self.Features), instances))
+        #for instance in instances:
+            #for feature in self.Features:
+                #if self.Dataset.IsMissing(feature, instance[0]):
+                    #print(f"inst: {self.Dataset.GetFeatureValue(feature, instance[0])}")
+        print(f"lenFilteredInst: {len(self.__filteredInstances)}")
 
         self.__projections = self.GetProjections(self.__filteredInstances)
+
+        self.__projections = get_fakes()[deleteIdx]
+        deleteIdx = deleteIdx + 1        
+        #print(f"projections: {self.__projections}")
 
         if not self.__projections or len(self.__projections) == 0:
             return False
@@ -377,7 +401,7 @@ class MultivariateOrderedFeatureSplitIterator(MultivariateSplitIterator):
         ldaTargets = [self.Dataset.GetIndexOfValue(
             self.Class[0], instance[0][classIdx]) for instance in instances]
 
-        lda = LDA(n_components=1)
+        lda = LDA()
         try:
             ldaOutput = lda.fit(ldaData, ldaTargets).transform(ldaData)
 
@@ -385,13 +409,16 @@ class MultivariateOrderedFeatureSplitIterator(MultivariateSplitIterator):
                 return list()
 
             w = lda.coef_[0]
+            print(f"w: {w}")
             if len(w) == 0:
                 return list()
 
             self.__weights = {self.Features[i]: w[i]
                               for i in range(0, len(self.Features))}
+            print(f"lda weights: {self.__weights}")
 
             w_norm = math.sqrt(sum(map(lambda x: math.pow(x, 2), w)))
+            print(f"w_norm: {w_norm}")
 
             for x in w:
                 if (w_norm == 0):
@@ -399,7 +426,7 @@ class MultivariateOrderedFeatureSplitIterator(MultivariateSplitIterator):
                 
                 divNum = abs(x/w_norm)
                 if ( (not math.isnan(divNum)) and divNum < self.WMin):
-                    print("x/w_norm is smaller than wMin")
+                    #print("x/w_norm is smaller than wMin")
                     return list()
 
             return list(map(lambda r: r[0], ldaOutput))

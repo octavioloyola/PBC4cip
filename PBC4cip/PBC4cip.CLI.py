@@ -59,6 +59,9 @@ def score(predicted, y):
         classified_as = 0
         error_count = 0
 
+        print(f"real: {real}")
+        print(f"predicted: {predicted}")
+
         for i in range(len(real)):
             if real[i] != predicted[i]:
                 error_count = error_count + 1
@@ -107,12 +110,13 @@ def Train_and_test(X_train, y_train, X_test, y_test, treeCount, multivariate, fi
 
 def test_PBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering, testFile, resultsId, delete): 
     #Uncomment this to work with text files instead of dataframes  
-    """
+    
     X_train, y_train = returnX_y(trainFile)
     X_test, y_test = returnX_y(testFile)
     file_dataset = FileDataset(trainFile)
     classifier = PBC4cip(tree_count=treeCount, multivariate=multivariate, filtering=filtering, file_dataset=trainFile)
     patterns = classifier.fit(X_train, y_train)
+    print(f"{patterns}")
     y_test_scores = classifier.score_samples(X_test)
     y_pred = classifier.predict(X_test)
     confusion, acc, auc = score_txtfile(y_pred, y_test, FileDataset(trainFile))
@@ -121,12 +125,13 @@ def test_PBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering,
     X_train, y_train, X_test, y_test = split_data(train_df, test_df)
     classifier = PBC4cip(tree_count=treeCount, multivariate=multivariate, filtering=filtering)
     patterns = classifier.fit(X_train, y_train)
+    print(f"patterns: {patterns}")
 
     y_test_scores = classifier.score_samples(X_test)
     
     y_pred = classifier.predict(X_test)
     confusion, acc, auc = score(y_pred, y_test)
-    
+    """
     WritePatternsCSV(patterns, trainFile, outputDirectory)
     WritePatternsBinary(patterns, trainFile, outputDirectory)
     WriteResultsCSV(confusion, acc, auc, len(patterns), testFile, outputDirectory, resultsId, filtering)

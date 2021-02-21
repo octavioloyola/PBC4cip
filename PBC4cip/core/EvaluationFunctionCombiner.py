@@ -9,25 +9,8 @@ class EvaluationFunctionCombiner():
         self.borda_count_table = []
         self.test = False
         self.split_iterator_list = []
-        #print(f"selff {self.borda_count_table}")
 
     def borda_count(self, parent, children, split_iterator):
-        if self.test:
-            parent_test = [129.0, 10.0]
-            children_test = [[110.0, 6.0], [19.0, 4.0]]
-            print(f"Twoing: {Twoing(parent_test, children_test)}")
-            print(f"Quinlan Gain: {QuinlanGain(parent_test, children_test)}")
-            print(f"Gini Impurity: {GiniImpurity(parent_test, children_test)}")
-            print(f"Multiclass Hellinger: {MultiClassHellinger(parent_test, children_test)}")
-            print(f"Chi Squared: {ChiSquared(parent_test, children_test)}")
-            print(f"DKM: {DKM(parent_test, children_test)}")
-            print(f"G_Statistic: {G_Statistic(parent_test, children_test)}")
-            print(f"MARSH: {MARSH(parent_test, children_test)}")
-            print(f"Normalized Gain: {NormalizedGain(parent_test, children_test)}")
-            print(f"KolmogorovDependence: {KolmogorovDependence(parent_test, children_test)}")
-            self.test = False
-        #print(f"bordaCount {self.borda_count_table}")
-        
         split_list = []
         split_list.append(Twoing(parent, children))
         split_list.append(QuinlanGain(parent, children))
@@ -65,23 +48,17 @@ class EvaluationFunctionCombiner():
         print(f"{self.borda_count_table}\n")
 
         for index in self.borda_count_table.index:
-            #print(self.borda_count_table.loc[index])
             lst = self.borda_count_table.loc[index]
             sorted_indices = np.argsort(-lst)
-            #print(f"lst:\n{lst}")
-            #print(f"sorted_indices:\n{sorted_indices}")
             ranks = np.empty_like(sorted_indices)
-            #print(f"ranks:\n{ranks}")
             ranks[sorted_indices] = np.arange(len(lst))
-            #print(f"ranks:\n{ranks}")
             self.borda_count_table.loc[index] = ranks
-            #print(self.borda_count_table.loc[[index]])
 
-        print(f"ranked:\n{self.borda_count_table}")
+        #print(f"ranked:\n{self.borda_count_table}")
         rank_lst = [self.borda_count_table[f'{col}'].sum() for col in list(self.borda_count_table) ]
-        print(f"Rankings\n{rank_lst}")
+        #print(f"Rankings\n{rank_lst}")
         best_idx = smallest_idx(rank_lst)
-        print(f"smallest: {best_idx}")
+        #print(f"smallest: {best_idx}")
 
         return smallest_idx(rank_lst)
 

@@ -91,6 +91,11 @@ class SplitIterator(object):
     def GetClassValue(self, instance):
         return self.Dataset.GetClasses().index(instance[self.Dataset.GetClassIdx()])
 
+    def GetSplit(self, index):
+        iter = 0
+        while iter <= index and FindNext():
+            iter += 1
+
 
 class NumericSplitIterator(SplitIterator):
 

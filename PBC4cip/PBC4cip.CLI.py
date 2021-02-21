@@ -121,6 +121,9 @@ def test_PBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering,
     X_train, y_train, X_test, y_test = split_data(train_df, test_df)
     classifier = PBC4cip(tree_count=treeCount, multivariate=multivariate, filtering=filtering)
     patterns = classifier.fit(X_train, y_train)
+    for pattern in patterns:
+        #print(f"patt: {pattern}")
+        pass
 
     y_test_scores = classifier.score_samples(X_test)
     

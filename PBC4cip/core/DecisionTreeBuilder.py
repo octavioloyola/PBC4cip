@@ -7,8 +7,7 @@ from .Helpers import CreateMembershipTupleList, FindDistribution, combine_instan
 from .SplitIterator import SplitIteratorProvider, MultivariateSplitIteratorProvider
 from .ForwardFeatureIterator import ForwardFeatureIterator
 from .DistributionTester import PureNodeStopCondition, AlwaysTrue
-
-
+from .EvaluationFunctionCombiner import EvaluationFunctionCombiner
 
 class DecisionTreeBuilder():
     def __init__(self, dataset, X, y):
@@ -18,7 +17,6 @@ class DecisionTreeBuilder():
         self.__MaxDepth = -1
         self.__PruneResult = False
         self.__Dataset = dataset
-        self.idk = X
         self.__trainInstances = combine_instances(X, y)
         self.__FeatureCount = 0
         self.__StopCondition = PureNodeStopCondition
@@ -92,6 +90,7 @@ class DecisionTreeBuilder():
             filteredObjMembership, self.Dataset.Model, self.Dataset.Class)
 
         result.TreeRootNode = DecisionTreeNode(parentDistribution)
+
         self.__FillNode(result.TreeRootNode,
                       filteredObjMembership, 0, currentContext)
         return result
@@ -109,17 +108,35 @@ class DecisionTreeBuilder():
         
         sampleFeatures = self.OnSelectingFeaturesToConsider(
             list(map(lambda attribute: attribute[0], self.Dataset.Attributes)), self.FeatureCount)
-
+        
+        eval_func_combiner = EvaluationFunctionCombiner()
         for feature in sampleFeatures:
             if feature != self.Dataset.Class[0]:
                 splitIterator = self.SplitIteratorProvider.GetSplitIterator(feature)
                 splitIterator.Initialize(instanceTuples)
                 while splitIterator.FindNext():
+                    eval_func_combiner.borda_count(node.Data, splitIterator.CurrentDistribution, splitIterator)
+                    
                     currentGain = self._distributionEvaluator(
                         node.Data, splitIterator.CurrentDistribution)
                     if currentGain >= self.MinimalSplitGain:
                         winningSplitSelector.EvaluateThis(
-                            currentGain, splitIterator, level)
+                            currentGain, splitIterator)
+        
+        winning_split_index = eval_func_combiner.borda_count_evaluate()
+        idx = 0
+        
+        for feature in sampleFeatures:
+            if feature != self.Dataset.Class[0]:
+                splitIterator = self.SplitIteratorProvider.GetSplitIterator(feature)
+                splitIterator.Initialize(instanceTuples)
+                while splitIterator.FindNext():
+                    if idx == winning_split_index:
+                        winningSplitSelector.List = list(tuple())
+                        winningSplitSelector.EvaluateThis(0, splitIterator)
+        
+        
+        print(f"\n\n")
         if winningSplitSelector.IsWinner():
             maxSelector = winningSplitSelector.WinningSelector
             node.ChildSelector = maxSelector

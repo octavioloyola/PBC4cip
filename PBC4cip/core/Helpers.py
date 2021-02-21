@@ -11,6 +11,16 @@ def SumMatrix(matrix):
 
     return sum(map(sum, matrix))
 
+def smallest_idx(source):
+    if len(source) == 0:
+        raise Exception("source must have atleast 1 element")
+    val = source[0]
+    idx = 0
+    for i,value in enumerate(source):
+        if value < val:
+            idx = i
+            val = value 
+    return idx
 
 def ArgMin(source):
     if not source:

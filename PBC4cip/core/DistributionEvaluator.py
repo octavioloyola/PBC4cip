@@ -88,8 +88,127 @@ def QuinlanGain (parent, children):
         nonMissing += childCount
         result -= __GetImpurity(distribution) * (childCount * 1.0 / total)
 
-    return result * (nonMissing) / total 
+    return result * (nonMissing) / total
 
+def Twoing(parent, children):
+    if len(children) != 2:
+        raise Exception("Twoing needs only 2 child nodes")
+
+    if sum(parent) == max(parent):
+        return 0
+    
+    total = sum(parent)
+    SL = sum(children[0])
+    SR = sum(children[1])
+    twoing = 0.25 * SL/total * SR/total
+
+    aux = 0
+    for i,elems in enumerate(parent):
+        aux = aux + abs((children[0][i] / SL) - (children[1][i]/ SR))
+
+    twoing = twoing * (aux**2)
+    return twoing
+
+def GiniImpurity(parent, children):
+    result = __GetImpurityGini(parent)
+    total = sum(parent)
+    nonMissing = 0
+
+    for distribution in children:
+        child_count = sum(distribution)
+        nonMissing = nonMissing + child_count
+        result = result - __GetImpurityGini(distribution) * (child_count * 1.0/total)
+    
+    return result * (nonMissing) / total
+
+def ChiSquared(parent, children):
+    if len(children) != 2:
+        raise Exception(
+            "Chi-Squared needs only two child nodes (binary split)")
+
+    if sum(parent) == max(parent):
+        return 0
+
+    s1p = children[0][0] / parent[0]
+    s1n = children[0][1] / parent[1]
+
+    s2p = children[1][0] / parent[0]
+    s2n = children[1][1] / parent[1]
+
+    result = (math.pow(s1p-s1n, 2) / (s1p+s1n)) + (math.pow(s2p-s2n, 2) / (s2p+s2n))
+    return result
+
+def DKM (parent, children):
+    result = __G(parent)
+    total = sum(parent)
+    non_missing = 0
+
+    for distribution in children:
+        child_count = sum(distribution)
+        non_missing += child_count
+        result -= __G(distribution) * (child_count * 1.0 / total)
+    return result * (non_missing) / total
+
+def G_Statistic(parent, children):
+    result = __GetImpurity(parent)
+    total = sum(parent)
+    non_missing = 0
+
+    for distribution in children:
+        child_count = sum(distribution)
+        non_missing += child_count
+        result -= __GetImpurity(distribution) * (child_count * 1.0 / total)
+
+    return 2 * sum(parent)*result * (non_missing) / total
+
+def MARSH(parent, children):
+    k = len(children)
+    result = __GetImpurity(parent)
+
+    total = sum(parent)
+    non_missing = 0
+    correction = 1
+
+    for distribution in children:
+        child_count = sum(distribution)
+        non_missing += child_count
+        result -= __GetImpurity(distribution) * (child_count * 1.0 / total)
+        correction *= child_count / total
+    
+    return correction * math.pow(k,k) * result * (non_missing) / total
+
+def KolmogorovDependence(parent, children):
+    if len(children) != 2:
+        raise Exception("Kolmogorov needs only 2 child nodes")
+
+    kolmogorv = float('-inf')
+    for i,value in enumerate(parent):
+        F0 = children[0][i] / parent[i]
+        F1 = __SumDifferent(children[0], i) / __SumDifferent(parent, i)
+        curr_value = abs(F0-F1)
+
+        if curr_value > kolmogorv:
+            kolmogorv = curr_value
+        if len(parent) == 2:
+            break
+    
+    if kolmogorv == float('inf'):
+        return sys.float_info.max
+    
+    return kolmogorv
+
+def NormalizedGain(parent, children):
+    result = __GetImpurity(parent)
+    total = sum(parent)
+    non_missing = 0
+
+    for distribution in children:
+        child_count = sum(distribution)
+        non_missing += child_count
+        result -= __GetImpurity(distribution) * (child_count * 1.0 / total)
+    
+    result /= math.log(len(children), 2)
+    return result
 
 def __SumDifferent(vector, index):
     sumValue = 0
@@ -106,5 +225,27 @@ def __GetImpurity (distribution) :
         if (value != 0):
             p = value * 1.0 / count
             result -= p * math.log(p, 2)
+
+    return result
+
+def __GetImpurityGini (distribution) :
+    result = 1.0
+    count = sum(distribution)
+
+    for value in distribution:
+        if (value != 0):
+            p = value * 1.0 / count
+            result -= math.pow(p, 2)
+
+    return result
+
+def __G(distribution):
+    result = 0
+    count = sum(distribution)
+
+    for value in distribution:
+        if value != 0:
+            p = value * 1.0/count
+            result = result + 2* math.sqrt(p * (1-p))
 
     return result

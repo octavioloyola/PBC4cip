@@ -141,7 +141,8 @@ def WritePatternsCSV(patterns, originalFile, outputDirectory, suffix=None):
 
     return name
 
-def WriteResultsCSV(confusion, acc, auc, numPatterns, originalFile, outputDirectory, resultsId, filtering):
+def WriteResultsCSV(confusion, acc, auc, numPatterns, originalFile, outputDirectory, resultsId, filtering, distribution_evaluator,
+functions_to_combine=None ):
     if not os.path.exists(outputDirectory):
         print(f"Creating output directory: {outputDirectory}")
         os.makedirs(outputDirectory)
@@ -153,13 +154,18 @@ def WriteResultsCSV(confusion, acc, auc, numPatterns, originalFile, outputDirect
     if os.path.exists(name):
         action = "Appending"
         results_out = open(name, "a+", newline='\n', encoding='utf-8')
+    elif functions_to_combine is None:
+        results_out = open(name, "w+", newline='\n', encoding='utf-8')
+        results_out.write(f"File,AUC,ACC,NumPatterns,Filtering,distribution_evaluator\n")
     else:
         results_out = open(name, "w+", newline='\n', encoding='utf-8')
-        results_out.write(f"File,AUC,ACC,NumPatterns,Filtering\n")
+        results_out.write(f"File,AUC,ACC,NumPatterns,Filtering,distribution_evaluator,eval_functions\n")
 
 
-    results_out.write(f"{datasetName},{str(auc)}, {str(acc)}, {str(numPatterns)}, {str(filtering)}\n")
-
+    if functions_to_combine is None:
+        results_out.write(f"{datasetName},{str(auc)}, {str(acc)}, {str(numPatterns)}, {str(filtering)}, {str(distribution_evaluator)}\n")
+    else:
+        results_out.write(f"{datasetName},{str(auc)}, {str(acc)}, {str(numPatterns)}, {str(filtering)}, {str(distribution_evaluator)}, {'-'.join(functions_to_combine)}\n")
     results_out.close()
 
     return name

@@ -4,7 +4,11 @@ from io import StringIO, BytesIO
 from .Helpers import ArgMax, convert_to_ndarray
 from .DecisionTreeBuilder import DecisionTreeBuilder, MultivariateDecisionTreeBuilder
 from .PatternMiner import PatternMinerWithoutFiltering
-from .DistributionEvaluator import Hellinger, MultiClassHellinger, QuinlanGain
+from .DistributionEvaluator import Hellinger
+from .DistributionEvaluator import Twoing, QuinlanGain, GiniImpurity, MultiClassHellinger, ChiSquared
+from .DistributionEvaluator import DKM, G_Statistic, MARSH, NormalizedGain, KolmogorovDependence
+from .DistributionEvaluatorHelper import get_distribution_evaluator
+from .EvaluationFunctionCombiner import EvaluationFunctionCombiner
 from .DistributionTester import PureNodeStopCondition, AlwaysTrue
 from .Item import SubsetRelation
 from .Dataset import Dataset, FileDataset, PandasDataset
@@ -14,8 +18,8 @@ from tqdm import tqdm
 
 
 class PBC4cip:
-
-    def __init__(self, tree_count=100, filtering=False, multivariate = False, file_dataset = None):
+    def __init__(self, tree_count=100, filtering=False, multivariate = False, 
+    distribution_evaluator='quinlan', file_dataset = None):
         self.File = None
         self.__miner = None
         if filtering:
@@ -32,6 +36,7 @@ class PBC4cip:
         self.__EmergingPatterns = list()
         self.__class_nominal_feature = None
         self.__normalizing_vector = None
+        self.__distribution_evaluator = get_distribution_evaluator(distribution_evaluator)
         self.__votesSum = None
         self.__classDistribution = None
 
@@ -74,6 +79,14 @@ class PBC4cip:
     @treeCount.setter
     def treeCount(self, new_treeCount):
         self.__treeCount = new_treeCount
+    
+    @property
+    def distribution_evaluator(self):
+        return self.__distribution_evaluator
+
+    @distribution_evaluator.setter
+    def distribution_evaluator(self, new_distribution_evaluator):
+        self.__distribution_evaluator = new_distribution_evaluator
 
 
     def fit(self, X, y):
@@ -90,10 +103,10 @@ class PBC4cip:
         miner.TreeCount = self.treeCount
         if self.multivariate:
             miner.decisionTreeBuilder = MultivariateDecisionTreeBuilder(self.dataset, X, y)
-            miner.decisionTreeBuilder.distributionEvaluator = QuinlanGain
+            miner.decisionTreeBuilder.distributionEvaluator = self.distribution_evaluator
         else:
             miner.decisionTreeBuilder = DecisionTreeBuilder(self.dataset, X, y)
-            miner.decisionTreeBuilder.distributionEvaluator = QuinlanGain
+            miner.decisionTreeBuilder.distributionEvaluator = self.distribution_evaluator
         self.EmergingPatterns = miner.Mine()
         if self.filterer is not None:
             self.EmergingPatterns = self.filterer.Filter(self.EmergingPatterns)
@@ -195,4 +208,4 @@ class PBC4cip:
                 classDistribution[i] = 0
 
         return classDistribution
-
+    

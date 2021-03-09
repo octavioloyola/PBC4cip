@@ -4,62 +4,52 @@ from .DistributionEvaluator import Twoing, QuinlanGain, GiniImpurity, MultiClass
 from .DistributionEvaluator import DKM, G_Statistic, MARSH, NormalizedGain, KolmogorovDependence
 from .Helpers import smallest_idx
 
-class EvaluationFunctionCombiner():
-    def __init__(self):
+class EvaluationFunctionCombiner:
+    def __init__(self, evaluation_functions_names):
         self.borda_count_table = []
-        self.test = False
-        self.split_iterator_list = []
+        self.evaluation_functions = self.get_functions_dict(evaluation_functions_names)   
 
-    def borda_count(self, parent, children, split_iterator):
+    def borda_count(self, parent, children):
         split_list = []
-        split_list.append(Twoing(parent, children))
-        split_list.append(QuinlanGain(parent, children))
-        split_list.append(GiniImpurity(parent, children))
-        split_list.append(MultiClassHellinger(parent, children))
-        split_list.append(ChiSquared(parent, children))
-        split_list.append(DKM(parent, children))
-        split_list.append(G_Statistic(parent, children))
-        split_list.append(MARSH(parent, children))
-        split_list.append(NormalizedGain(parent, children))
-        split_list.append(KolmogorovDependence(parent, children))
+        for func in self.evaluation_functions.values():
+            split_list.append(func(parent, children))
         self.borda_count_table.append(split_list)
 
     def borda_count_evaluate(self):
         if len(self.borda_count_table) == 0:
             return
-
         self.borda_count_table = np.array(self.borda_count_table)
         self.borda_count_table = np.transpose(self.borda_count_table)
-        
-        self.borda_count_table = pd.DataFrame.from_dict({
-            'Twoing': self.borda_count_table[0],
-            'Quinlan Gain': self.borda_count_table[1],
-            'Gini Impurity': self.borda_count_table[2],
-            'Multiclass Hellinger': self.borda_count_table[3],
-            'Chi Squared': self.borda_count_table[4],
-            'DKM': self.borda_count_table[5],
-            'G Statistic': self.borda_count_table[6],
-            'MARSH': self.borda_count_table[7],
-            'Normalized Gain': self.borda_count_table[8],
-            'Kolmogorov Dependence': self.borda_count_table[9]
-        },
-        orient='index', columns=[f'CS {i}' for i,_ in enumerate(self.borda_count_table[0])])
 
-        print(f"{self.borda_count_table}\n")
+        self.borda_count_table = pd.DataFrame(self.borda_count_table)
+        self.borda_count_table.columns = [f'CS{i}' for i,_ in enumerate(self.borda_count_table)]
+        self.borda_count_table.index = [name for name in self.evaluation_functions]
 
+        #print(self.borda_count_table)
+    
         for index in self.borda_count_table.index:
-            lst = self.borda_count_table.loc[index]
-            sorted_indices = np.argsort(-lst)
-            ranks = np.empty_like(sorted_indices)
-            ranks[sorted_indices] = np.arange(len(lst))
-            self.borda_count_table.loc[index] = ranks
-
-        #print(f"ranked:\n{self.borda_count_table}")
+            self.borda_count_table.loc[index] = self.borda_count_table.loc[index].rank(ascending=False)
         rank_lst = [self.borda_count_table[f'{col}'].sum() for col in list(self.borda_count_table) ]
-        #print(f"Rankings\n{rank_lst}")
         best_idx = smallest_idx(rank_lst)
-        #print(f"smallest: {best_idx}")
 
+        self.borda_count_table = [] #reset for future cycles
         return smallest_idx(rank_lst)
 
 
+    def get_functions_dict(self, func_names):
+        func_names = [name.lower() for name in func_names]
+        evaluator_dict = {
+                'twoing': Twoing,
+                'quinlan gain': QuinlanGain,
+                'gini impurity': GiniImpurity,
+                'multi class hellinger': MultiClassHellinger,
+                'chi-squared': ChiSquared,
+                'dkm': DKM,
+                'g-statistic': G_Statistic,
+                'marsh': MARSH,
+                'normalized gain': NormalizedGain,
+                'kolmogorov': KolmogorovDependence
+            }
+        return {key:value for (key,value) in evaluator_dict.items() if key in func_names}
+
+    

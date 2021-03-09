@@ -21,12 +21,7 @@ class DecisionTreeClassifier(object):
     def Model(self, new_model):
         self.__Model = new_model
 
-    def __Classify(self, instance):
-        classification = self.ClassifyInstance(
-            self.DecisionTree.TreeRootNode, instance, 1)
-        return MultiplyBy(classification, (1/sum(classification)))
-
-    def __ClassifyInstance(self, node, instance, instanceMembership):
+    def ClassifyInstance(self, node, instance, instanceMembership):
         if node.IsLeaf:
             return MultiplyBy(node.Data, instanceMembership)
 
@@ -40,7 +35,7 @@ class DecisionTreeClassifier(object):
                 selection = childrenSelection[i]
                 if selection > 0:
                     child = node.Children[i]
-                    childValue = __ClassifyInstance(
+                    childValue = self.ClassifyInstance(
                         child, instance, instanceMembership)
                     if result != None:
                         result = AddTo(result, childValue)
@@ -51,7 +46,7 @@ class DecisionTreeClassifier(object):
             for i in range(len(node.Children)):
                 child = node.Children[i]
                 childMembership = sum(node.Children[i].Data)
-                childValue = __ClassifyInstance(
+                childValue = self.ClassifyInstance(
                     child, instance, childMembership / (totalNodeMembership * instanceMembership))
                 if result != None:
                     result = AddTo(result, childValue)
@@ -59,3 +54,8 @@ class DecisionTreeClassifier(object):
                     result = childValue
                     
         return result
+
+    def Classify(self, instance):
+        classification = self.ClassifyInstance(
+            self.DecisionTree.TreeRootNode, instance, 1)
+        return MultiplyBy(classification, (1/sum(classification)))

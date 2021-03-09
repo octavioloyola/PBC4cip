@@ -1,5 +1,7 @@
 import os
 import argparse
+import math
+import itertools
 import numpy as np
 import pandas as pd
 
@@ -10,8 +12,11 @@ from core.FileManipulation import WriteResultsCSV, returnX_y, get_dataframe_from
 from core.DecisionTreeBuilder import DecisionTreeBuilder, MultivariateDecisionTreeBuilder
 from core.PatternMiner import PatternMinerWithoutFiltering
 from core.PatternFilter import MaximalPatternsGlobalFilter
-from core.DistributionEvaluator import Hellinger, MultiClassHellinger, QuinlanGain
+from core.DistributionEvaluatorHelper import get_distribution_evaluator
+from core.RandomSampler import SampleWithoutRepetition
 from core.Evaluation import obtainAUCMulticlass
+from core.SupervisedClassifier import DecisionTreeClassifier
+
 from core.Helpers import ArgMax, convert_to_ndarray, get_col_dist, get_idx_val
 from core.Dataset import Dataset, FileDataset, PandasDataset
 from datetime import datetime
@@ -41,6 +46,75 @@ def import_data(trainFile, testFile):
     test = pd.read_csv(testFile, sep= ',')
 
     return train, test
+
+def run_C45(trainFile, outputDirectory, testFile, resultsId, distribution_evaluator, evaluationFunctionDir ):
+    with open(evaluationFunctionDir, "r") as f:
+        eval_functions = f.readlines()
+        eval_functions = [line.replace("\n", "") for line in eval_functions]
+   
+    X_train, y_train = returnX_y(trainFile)
+    X_test, y_test = returnX_y(testFile)
+    file_dataset = FileDataset(trainFile)
+    dt_builder = DecisionTreeBuilder(file_dataset, X_train, y_train)
+    if distribution_evaluator == 'combiner':
+        dt_builder.distributionEvaluator = get_distribution_evaluator(distribution_evaluator)(eval_functions)
+    else:
+        dt_builder.distributionEvaluator = get_distribution_evaluator(distribution_evaluator)
+    dt_builder.FeatureCount = int(math.log(len(file_dataset.Attributes), 2) + 1)
+    dt_builder.OnSelectingFeaturesToConsider = SampleWithoutRepetition
+    dt = dt_builder.Build()
+    dt_classifier = DecisionTreeClassifier(dt)
+    y_scores = []
+    for instance in X_test:
+        inst_classify = dt_classifier.Classify(instance)
+        #print(f"x_classify: {inst_classify}" )
+        y_scores.append(inst_classify)
+    
+    y_pred = [ArgMax(instance) for instance in y_scores]
+    #print(f"y_pred: {y_pred}")
+    confusion, acc, auc = score_txtfile(y_pred, y_test, file_dataset)
+
+    WriteResultsCSV(confusion, acc, auc, 0, testFile, outputDirectory, resultsId, "Not applicable", distribution_evaluator,
+    functions_to_combine=eval_functions )
+    show_results(confusion, acc, auc, 0)
+
+def run_C45_combinations(trainFile, outputDirectory, testFile, resultsId, distribution_evaluator, evaluationFunctionDir, combination_size):
+    if distribution_evaluator != 'combiner':
+        raise Exception(f"Evaluation measure {distribution_evaluator} not supported for run_C45_combinations")
+    with open(evaluationFunctionDir, "r") as f:
+        eval_functions = f.readlines()
+        eval_functions = [line.replace("\n", "") for line in eval_functions]
+   
+    X_train, y_train = returnX_y(trainFile)
+    X_test, y_test = returnX_y(testFile)
+    file_dataset = FileDataset(trainFile)
+    dt_builder = DecisionTreeBuilder(file_dataset, X_train, y_train)
+    dt_builder.distributionEvaluator = get_distribution_evaluator(distribution_evaluator)
+
+    dt_builder.FeatureCount = int(math.log(len(file_dataset.Attributes), 2) + 1)
+    dt_builder.OnSelectingFeaturesToConsider = SampleWithoutRepetition
+
+    func_combinations = list(itertools.combinations(eval_functions, combination_size))
+    for combination in func_combinations:
+        dt_builder.distributionEvaluator = dt_builder.distributionEvaluator(list(combination))
+        dt = dt_builder.Build()
+        dt_classifier = DecisionTreeClassifier(dt)
+        y_scores = []
+        for instance in X_test:
+            inst_classify = dt_classifier.Classify(instance)
+            #print(f"x_classify: {inst_classify}" )
+            y_scores.append(inst_classify)
+    
+        y_pred = [ArgMax(instance) for instance in y_scores]
+        #print(f"y_pred: {y_pred}")
+        confusion, acc, auc = score_txtfile(y_pred, y_test, file_dataset)
+
+        WriteResultsCSV(confusion, acc, auc, 0, testFile, outputDirectory, resultsId, "Not applicable", distribution_evaluator,
+        functions_to_combine=list(combination))
+        show_results(confusion, acc, auc, 0)
+        dt_builder.distributionEvaluator = get_distribution_evaluator(distribution_evaluator)
+
+
 
 def split_data(train, test):
     X_train = train.iloc[:,  0:train.shape[1]-1]
@@ -105,21 +179,23 @@ def Train_and_test(X_train, y_train, X_test, y_test, treeCount, multivariate, fi
     
     return patterns, confusion, acc, auc
 
-def test_PBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering, testFile, resultsId, delete): 
+def test_PBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering, testFile, resultsId, delete, distribution_evaluator): 
     #Uncomment this to work with text files instead of dataframes  
-    """
+    
     X_train, y_train = returnX_y(trainFile)
     X_test, y_test = returnX_y(testFile)
     file_dataset = FileDataset(trainFile)
-    classifier = PBC4cip(tree_count=treeCount, multivariate=multivariate, filtering=filtering, file_dataset=trainFile)
+    classifier = PBC4cip(tree_count=treeCount, multivariate=multivariate, filtering=filtering, file_dataset=trainFile, distribution_evaluator=distribution_evaluator)
     patterns = classifier.fit(X_train, y_train)
     y_test_scores = classifier.score_samples(X_test)
+    #print(f"y test scores: {y_test_scores}")
     y_pred = classifier.predict(X_test)
+    #print(f"y_pred: {y_pred}")
     confusion, acc, auc = score_txtfile(y_pred, y_test, FileDataset(trainFile))
     """
     train_df, test_df = import_data(trainFile, testFile)
     X_train, y_train, X_test, y_test = split_data(train_df, test_df)
-    classifier = PBC4cip(tree_count=treeCount, multivariate=multivariate, filtering=filtering)
+    classifier = PBC4cip(tree_count=treeCount, multivariate=multivariate, filtering=filtering, distribution_evaluator=distribution_evaluator)
     patterns = classifier.fit(X_train, y_train)
     for pattern in patterns:
         #print(f"patt: {pattern}")
@@ -129,10 +205,10 @@ def test_PBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering,
     
     y_pred = classifier.predict(X_test)
     confusion, acc, auc = score(y_pred, y_test)
-    
-    WritePatternsCSV(patterns, trainFile, outputDirectory)
-    WritePatternsBinary(patterns, trainFile, outputDirectory)
-    WriteResultsCSV(confusion, acc, auc, len(patterns), testFile, outputDirectory, resultsId, filtering)
+    """
+    #WritePatternsCSV(patterns, trainFile, outputDirectory)
+    #WritePatternsBinary(patterns, trainFile, outputDirectory)
+    WriteResultsCSV(confusion, acc, auc, len(patterns), testFile, outputDirectory, resultsId, filtering, distribution_evaluator)
     show_results(confusion, acc, auc, len(patterns))
 
 
@@ -181,8 +257,13 @@ def Execute(args):
 
     for f in tra:
         tra.set_description(f"Working from {training_files[f]}")
-        test_PBC4cip(training_files[f], args.output_directory, args.tree_count, args.multivariate,
-            args.filtering,  testing_files[f], resultsId, args.delete_binary )
+        #test_PBC4cip(training_files[f], args.output_directory, args.tree_count, args.multivariate,
+            #args.filtering,  testing_files[f], resultsId, args.delete_binary, args.distribution_evaluation )
+        #run_C45(training_files[f], args.output_directory,  testing_files[f], resultsId, args.distribution_evaluation
+        #, args.evaluation_functions)
+        run_C45_combinations(training_files[f], args.output_directory,  testing_files[f], resultsId, args.distribution_evaluation
+        , args.evaluation_functions, args.combination_size)
+        
 
 
 if __name__ == '__main__':
@@ -262,6 +343,24 @@ if __name__ == '__main__':
                         metavar="'tra'",
                         default="tra",
                         help="states which suffix will indicate the training files")
+    
+    parser.add_argument("--distribution-evaluation",
+                        type=str,
+                        metavar="distEval",
+                        default='quinlan',
+                        help="indicates the evaluation function used for the tree")
+    
+    parser.add_argument("--evaluation-functions",
+                        type=str,
+                        metavar="evalFuncs",
+                        default=None,
+                        help="indicates which functions to be combined if so needed")
+    parser.add_argument("--combination-size",
+                        type=int,
+                        metavar='k',
+                        default=2,
+                        help="indicates the size of the combination for the evaluation functions")
+    
 
     
 

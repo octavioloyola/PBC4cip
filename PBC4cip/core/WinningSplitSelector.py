@@ -25,7 +25,6 @@ class WinningSplitSelector:
         return self.List[index][2]
 
     def EvaluateThis(self, currentGain, splitIterator):
-        #print(f"currentGain: {currentGain} MinStoredValue: {self.MinStoredValue}  len(self.List): {len(self.List)} whichBetter: {self.__whichBetterToFind}")
         if (len(self.List) < self.__whichBetterToFind or currentGain > self.MinStoredValue):
             currentChildSelector = splitIterator.CreateCurrentChildSelector()
             copyOfCurrentDistribution = copy.deepcopy(
@@ -34,7 +33,6 @@ class WinningSplitSelector:
                 tuple((currentGain, currentChildSelector, copyOfCurrentDistribution)))
             self.List.sort(key=cmp_to_key(Compare))
 
-            #print(f"self.List: {self.List} about to remove {self.__whichBetterToFind} if {len(self.List) > self.__whichBetterToFind}")
             if len(self.List) > self.__whichBetterToFind:
                 self.List.remove(self.List[self.__whichBetterToFind])
             index = min(self.__whichBetterToFind-1, len(self.List)-1)

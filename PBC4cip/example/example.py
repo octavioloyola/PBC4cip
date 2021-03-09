@@ -8,7 +8,6 @@ from core.PBC4cip import PBC4cip
 from core.Evaluation import obtainAUCMulticlass
 from core.Helpers import get_col_dist, get_idx_val
 
-
 def import_data(trainFile, testFile):
     train = pd.read_csv(trainFile) 
     test = pd.read_csv(testFile)

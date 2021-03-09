@@ -74,8 +74,9 @@ class MultipleValuesSelector(SingleFeatureSelector):
         if not self.Dataset.IsNominalFeature(self.Feature):
             raise Exception("Cannot use multiple values on non-nominal data")
         value = self.Dataset.GetFeatureValue(self.Feature, instance)
-        index = self.Values.index(value)
-        if index == -1:
+        try:
+            index = self.Values.index(value)
+        except ValueError:
             return None
         result = [0]*self.ChildrenCount
         result[index] = 1

@@ -67,7 +67,8 @@ class EqualThanItem(SingleValueItem):
         value = self.GetValue(instance)
         if math.isnan(value):
             return False
-        return value == self.Value
+        else:
+            return value == self.Value
 
     def CompareTo(self, other):
         if isinstance(other, EqualThanItem):

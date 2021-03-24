@@ -54,7 +54,8 @@ class Dataset(ABC):
     def GetValueOfIndex(self, feature, index):
         values = self.GetNominalValues(feature)
         if not values:
-            return None
+            #print(f"None? {values}")
+            return float('nan')
         else:
             return values[index]
 
@@ -63,7 +64,11 @@ class Dataset(ABC):
         if not values:
             return -1
         else:
-            return values.index(value)
+            try:
+                return_val = values.index(value)
+                return return_val
+            except ValueError:
+                return float('nan')
 
     def GetClasses(self):
         return self.GetNominalValues('class')
@@ -92,12 +97,8 @@ class Dataset(ABC):
         return self.GetIndexOfValue(self.Class[0], y_instance[0])
 
     def IsMissing(self, feature, instance):
-        value = self.GetFeatureValue(feature, instance)
-
-        if self.IsNominalFeature(feature):
-            return value < 0
-        else:
-            return (not value or value == math.nan)   
+        value = self.GetFeatureValue(feature, instance)        
+        return math.isnan(value)
 
 class PandasDataset(Dataset):
     def __init__(self, X,y):
@@ -212,6 +213,8 @@ class FeatureInformation(object):
 
         nonMissingValues = list(filter(lambda instance: not self.Dataset.IsMissing(
             self.Feature, instance), self.Dataset.Instances))
+        
+        #print(f"nonMissingValues: {nonMissingValues}")
 
         self.MissingValueCount = len(
             self.Dataset.Instances) - len(nonMissingValues)
@@ -224,6 +227,7 @@ class FeatureInformation(object):
                     list(filter(lambda instance: self.Dataset.GetFeatureValue(self.Feature, instance) == value and not self.Dataset.IsMissing(self.Feature, instance), self.Dataset.Instances)))
             self.ValueProbability = list(
                 map(lambda value: value / sum(self.Distribution), self.Distribution))
+            
             self.Ratio = list(
                 map(lambda value: value / min(self.Distribution), self.Distribution))
 

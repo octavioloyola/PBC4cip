@@ -53,6 +53,7 @@ def run_C45(trainFile, outputDirectory, testFile, resultsId, distribution_evalua
         eval_functions = [line.replace("\n", "") for line in eval_functions]
    
     X_train, y_train = returnX_y(trainFile)
+    #print(f"{X_train[523]}")
     X_test, y_test = returnX_y(testFile)
     file_dataset = FileDataset(trainFile)
     dt_builder = DecisionTreeBuilder(file_dataset, X_train, y_train)
@@ -146,7 +147,7 @@ def score(predicted, y):
 def score_txtfile(predicted, y, dataset):
     real = list(map(lambda instance: dataset.GetClassValue(instance), y))
     numClasses = len(dataset.Class[1])
-    confusion = [[0]*2 for i in range(numClasses)]
+    confusion = [[0]*numClasses for i in range(numClasses)]
     classified_as = 0
     error_count = 0
 
@@ -192,6 +193,9 @@ def test_PBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering,
     y_pred = classifier.predict(X_test)
     #print(f"y_pred: {y_pred}")
     confusion, acc, auc = score_txtfile(y_pred, y_test, FileDataset(trainFile))
+    for pattern in patterns:
+        #print(f"patt: {pattern}")
+        pass
     """
     train_df, test_df = import_data(trainFile, testFile)
     X_train, y_train, X_test, y_test = split_data(train_df, test_df)
@@ -259,10 +263,10 @@ def Execute(args):
         tra.set_description(f"Working from {training_files[f]}")
         #test_PBC4cip(training_files[f], args.output_directory, args.tree_count, args.multivariate,
             #args.filtering,  testing_files[f], resultsId, args.delete_binary, args.distribution_evaluation )
-        #run_C45(training_files[f], args.output_directory,  testing_files[f], resultsId, args.distribution_evaluation
-        #, args.evaluation_functions)
-        run_C45_combinations(training_files[f], args.output_directory,  testing_files[f], resultsId, args.distribution_evaluation
-        , args.evaluation_functions, args.combination_size)
+        run_C45(training_files[f], args.output_directory,  testing_files[f], resultsId, args.distribution_evaluation
+        , args.evaluation_functions)
+        #run_C45_combinations(training_files[f], args.output_directory,  testing_files[f], resultsId, args.distribution_evaluation
+        #, args.evaluation_functions, args.combination_size)
         
 
 

@@ -128,15 +128,18 @@ def ChiSquared(parent, children):
 
     if sum(parent) == max(parent):
         return 0
+    try:
+        s1p = children[0][0] / parent[0]
+        s1n = children[0][1] / parent[1]
 
-    s1p = children[0][0] / parent[0]
-    s1n = children[0][1] / parent[1]
-
-    s2p = children[1][0] / parent[0]
-    s2n = children[1][1] / parent[1]
-
-    result = (math.pow(s1p-s1n, 2) / (s1p+s1n)) + (math.pow(s2p-s2n, 2) / (s2p+s2n))
-    return result
+        s2p = children[1][0] / parent[0]
+        s2n = children[1][1] / parent[1]
+    
+        result = (math.pow(s1p-s1n, 2) / (s1p+s1n)) + (math.pow(s2p-s2n, 2) / (s2p+s2n))
+        return result
+    except ZeroDivisionError:
+        return float('nan')
+    #return result
 
 def DKM (parent, children):
     result = __G(parent)
@@ -183,8 +186,14 @@ def KolmogorovDependence(parent, children):
 
     kolmogorv = float('-inf')
     for i,value in enumerate(parent):
-        F0 = children[0][i] / parent[i]
-        F1 = __SumDifferent(children[0], i) / __SumDifferent(parent, i)
+        try:
+            F0 = children[0][i] / parent[i]
+        except ZeroDivisionError:
+            F0 = float('nan')
+        try:
+            F1 = __SumDifferent(children[0], i) / __SumDifferent(parent, i)
+        except ZeroDivisionError:
+            F1 = float('nan')
         curr_value = abs(F0-F1)
 
         if curr_value > kolmogorv:

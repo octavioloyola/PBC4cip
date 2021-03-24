@@ -204,7 +204,9 @@ class NominalSplitIterator(SplitIterator):
         self.__totalDistribution = [0]*self._numClasses
 
         for instance in instances:
+            #print(f"instanceElem: {instance[0]}")
             if self.IsMissing(instance[0]):
+                #print(f"instanceElem: {instance[0]}")
                 continue
             value = self.GetFeatureValue(instance[0])
             current = [0]*self._numClasses

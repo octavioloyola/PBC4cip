@@ -105,10 +105,14 @@ class DecisionTreeBuilder():
 
     def __FillNode(self, node, instanceTuples, level, currentContext):
         if self.StopCondition(node.Data, self.Dataset.Model, self.Dataset.Class):
+            #print(f"nodeData: {node.Data}")
+            #print(f"Stopped by stopCondition {self.StopCondition}")
             return
         if self.MaxDepth >= 0 and (level >= self.MaxDepth - 1):
+            #print(f"self MaxDepth{self.MaxDepth} level {level}")
             return
         if sum(node.Data) <= self.MinimalObjByLeaf:
+            #print(f"node Data {node.Data} less than {self.MinimalObjByLeaf} ")
             return
         
         whichBetterToFind = 1
@@ -124,6 +128,7 @@ class DecisionTreeBuilder():
                     while splitIterator.FindNext():
                         currentGain = self.distributionEvaluator(
                             node.Data, splitIterator.CurrentDistribution)
+                        #print(f"currGain:{currentGain}")
                         if currentGain >= self.MinimalSplitGain:
                             winningSplitSelector.EvaluateThis(
                                 currentGain, splitIterator)
@@ -149,6 +154,7 @@ class DecisionTreeBuilder():
 
                 
         if winningSplitSelector.IsWinner():
+            #print(f"list: {winningSplitSelector.List}")
             maxSelector = winningSplitSelector.WinningSelector
             node.ChildSelector = maxSelector
             node.Children = list()

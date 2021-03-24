@@ -97,6 +97,8 @@ class PBC4cip:
             if  not isinstance(y[0], np.ndarray):
                 y = convert_to_ndarray(y)    
 
+        #print(f"instance: {self.dataset.Instances[0]}")
+
         self.miner = PatternMinerWithoutFiltering()
         miner = self.miner
         miner.dataset = self.dataset

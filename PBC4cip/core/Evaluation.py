@@ -163,13 +163,23 @@ def NormalizeVotes(values):
     return result
 
 def __obtainAUCBinary(tp, tn, fp, fn):
+        #print(f"tp {tp} tn {tn} fp {fp} fn {fn}")
         nPos = tp +fn
         nNeg = tn + fp
-        recall = tp / nPos
+
+        try:
+            recall = tp / nPos
+        except ZeroDivisionError:
+            recall = float('nan')
+
         if tp == 0:
             recall = 0
         
-        sensibility = tn/ nNeg
+        try:
+            sensibility = tn/ nNeg
+        except ZeroDivisionError:
+            sensibility = float('nan')
+        
         if tn == 0:
             sensibility = 0
         
@@ -177,8 +187,10 @@ def __obtainAUCBinary(tp, tn, fp, fn):
 
 def obtainAUCMulticlass(confusion, num_classes):
     sumVal = 0
+    #confusion = [[69, 7],[8, 53]]
     for i in range(num_classes):
         tp = confusion[i][i]
+        
 
         for j in range(i+1, num_classes):
             fp = confusion[j][i]
@@ -186,6 +198,7 @@ def obtainAUCMulticlass(confusion, num_classes):
             tn = confusion[j][j]
             sumVal = sumVal + __obtainAUCBinary(tp, tn, fp, fn)
     
+    print(tp, fp, fn, tn)
     avg = (sumVal * 2) / (num_classes * (num_classes-1))
     return avg
 

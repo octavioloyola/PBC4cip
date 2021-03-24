@@ -4,6 +4,7 @@ import csv
 from tqdm import tqdm
 from io import StringIO, BytesIO
 import pandas as pd
+import numpy as np
 
 def ReadARFF(file):
     import arff
@@ -18,25 +19,45 @@ def ReadAndDeleteARFF(file):
         print(f"Can not delete the file '{file}' as it doesn't exists")
     return dataset
 
+def setClassAttribute(file, output_name):
+    f = open(file).readlines()
+    if os.path.exists(file):
+        os.remove(file)
+    else:
+        raise Exception(f"file {file} did have its class attribute properly set")
+    new_f = str( file[:len(file)-9]+'.arff')
+    with open (new_f, 'w') as arff_file:
+        for line in f:
+            if line != '\n':
+                newline = line
+                if newline.split()[0] == '@attribute' and newline.split()[1] == output_name:
+                    newline = newline.replace(output_name, 'Class')
+                arff_file.write(newline)
+    return ReadAndDeleteARFF(new_f)
 
 def ReadDAT(file):
     f = open(file).readlines()
-    new_f = str(file+'.arff')
+    new_f = str(file+'-copy.dat')
     with open(new_f, 'w') as new_file:
         for line in f:
             if line != '\n':
                 newline = line
-                if newline.split()[0] == '@inputs' or newline.split()[0] == '@output':
+                if newline.split()[0] == '@inputs':
                     continue
+                if newline.split()[0] == '@output' or newline.split()[0] == '@outputs':
+                    output_name = newline.split()[1]
                 elif newline.split()[0] == '@attribute':
                     newline = newline.replace(
                         'real', 'real ').replace(
-                        'REAL', 'REAL ').replace('  ', ' ')
+                        'REAL', 'REAL ').replace('integer', 'integer ').replace(
+                            'INTEGER', 'INTEGER ').replace('  ', ' ')
+                    if '{' in newline.split()[1]:
+                        newline = newline.replace('{', ' {')
                     if newline.split()[2].lower() in ['numeric', 'real', 'integer', 'string']:
                         newline = newline.split(
                         )[0]+' '+newline.split()[1]+' '+newline.split()[2]+'\n'
                 new_file.write(newline)
-    return ReadAndDeleteARFF(new_f)
+    return setClassAttribute(new_f, output_name)
 
 def convert_dat_to_csv(file):
     f = open(file).readlines()
@@ -197,4 +218,5 @@ def get_dataframe_from_arff(arff_file):
                 map(lambda attribute: attribute[0], arff_file['attributes'])
             )
         )
+    instancesDf = instancesDf.fillna(value=np.nan)
     return instancesDf

@@ -1,4 +1,4 @@
-from .DistributionEvaluator import Hellinger
+from .DistributionEvaluator import Hellinger, MultiClassBhattacharyya
 from .DistributionEvaluator import Twoing, QuinlanGain, GiniImpurity, MultiClassHellinger, ChiSquared
 from .DistributionEvaluator import DKM, G_Statistic, MARSH, NormalizedGain, KolmogorovDependence
 from .EvaluationFunctionCombiner import EvaluationFunctionCombiner
@@ -15,6 +15,7 @@ def get_distribution_evaluator(eval_func_name):
             'marsh': MARSH,
             'normalized-gain': NormalizedGain,
             'kolmogorov': KolmogorovDependence,
+            'bhattacharyya': MultiClassBhattacharyya,
             'combiner': EvaluationFunctionCombiner
         }
 

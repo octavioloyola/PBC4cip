@@ -98,6 +98,7 @@ class DecisionTreeBuilder():
             filteredObjMembership, self.Dataset.Model, self.Dataset.Class)
 
         result.TreeRootNode = DecisionTreeNode(parentDistribution)
+        #print(f"TreeRootNode: {result.TreeRootNode.Data}")
 
         self.__FillNode(result.TreeRootNode,
                       filteredObjMembership, 0, currentContext)
@@ -105,7 +106,6 @@ class DecisionTreeBuilder():
 
     def __FillNode(self, node, instanceTuples, level, currentContext):
         if self.StopCondition(node.Data, self.Dataset.Model, self.Dataset.Class):
-            #print(f"nodeData: {node.Data}")
             #print(f"Stopped by stopCondition {self.StopCondition}")
             return
         if self.MaxDepth >= 0 and (level >= self.MaxDepth - 1):
@@ -128,7 +128,6 @@ class DecisionTreeBuilder():
                     while splitIterator.FindNext():
                         currentGain = self.distributionEvaluator(
                             node.Data, splitIterator.CurrentDistribution)
-                        #print(f"currGain:{currentGain}")
                         if currentGain >= self.MinimalSplitGain:
                             winningSplitSelector.EvaluateThis(
                                 currentGain, splitIterator)

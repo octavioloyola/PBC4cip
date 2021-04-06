@@ -19,6 +19,7 @@ from core.SupervisedClassifier import DecisionTreeClassifier
 
 from core.Helpers import ArgMax, convert_to_ndarray, get_col_dist, get_idx_val
 from core.Dataset import Dataset, FileDataset, PandasDataset
+from core.ResultsAnalyzer import show_results, wilcoxon, order_results
 from datetime import datetime
 
 def CheckSuffix(file, suffix):
@@ -53,7 +54,6 @@ def run_C45(trainFile, outputDirectory, testFile, resultsId, distribution_evalua
         eval_functions = [line.replace("\n", "") for line in eval_functions]
    
     X_train, y_train = returnX_y(trainFile)
-    #print(f"{X_train[523]}")
     X_test, y_test = returnX_y(testFile)
     file_dataset = FileDataset(trainFile)
     dt_builder = DecisionTreeBuilder(file_dataset, X_train, y_train)
@@ -79,12 +79,22 @@ def run_C45(trainFile, outputDirectory, testFile, resultsId, distribution_evalua
     functions_to_combine=eval_functions )
     show_results(confusion, acc, auc, 0)
 
+def run_C45_multiple(trainFile, outputDirectory, testFile, resultsId, evaluationFunctionDir, eval_function_list):
+    with open(eval_function_list, "r") as f:
+        eval_functions = f.readlines()
+        eval_functions = [line.replace("\n", "") for line in eval_functions]
+    
+    for func in eval_functions:
+        run_C45(trainFile, outputDirectory, testFile, resultsId, func, evaluationFunctionDir)
+
 def run_C45_combinations(trainFile, outputDirectory, testFile, resultsId, distribution_evaluator, evaluationFunctionDir, combination_size):
     if distribution_evaluator != 'combiner':
         raise Exception(f"Evaluation measure {distribution_evaluator} not supported for run_C45_combinations")
     with open(evaluationFunctionDir, "r") as f:
         eval_functions = f.readlines()
         eval_functions = [line.replace("\n", "") for line in eval_functions]
+    
+    print(f"eval_func {eval_functions}")
    
     X_train, y_train = returnX_y(trainFile)
     X_test, y_test = returnX_y(testFile)
@@ -160,15 +170,6 @@ def score_txtfile(predicted, y, dataset):
     auc = obtainAUCMulticlass(confusion, numClasses)
 
     return confusion, acc, auc
-
-
-def show_results(confusion, acc, auc, numPatterns):
-    print()
-    for i in range(len(confusion[0])):
-        for j in range(len(confusion[0])):
-            print(f"{confusion[i][j]} ", end='')
-        print("")
-    print(f"acc: {acc} , auc: {auc} , numPatterns: {numPatterns}")
 
 def Train_and_test(X_train, y_train, X_test, y_test, treeCount, multivariate, filtering, dataset=None):
     classifier = PBC4cip(tree_count=treeCount, filtering = filtering, file_dataset=dataset)
@@ -263,12 +264,15 @@ def Execute(args):
         tra.set_description(f"Working from {training_files[f]}")
         #test_PBC4cip(training_files[f], args.output_directory, args.tree_count, args.multivariate,
             #args.filtering,  testing_files[f], resultsId, args.delete_binary, args.distribution_evaluation )
-        run_C45(training_files[f], args.output_directory,  testing_files[f], resultsId, args.distribution_evaluation
-        , args.evaluation_functions)
+        #run_C45(training_files[f], args.output_directory,  testing_files[f], resultsId, args.distribution_evaluation
+        #, args.evaluation_functions)
         #run_C45_combinations(training_files[f], args.output_directory,  testing_files[f], resultsId, args.distribution_evaluation
         #, args.evaluation_functions, args.combination_size)
+        #run_C45_multiple(training_files[f], args.output_directory,  testing_files[f], resultsId
+        #, args.evaluation_functions, args.evaluation_functions_list)
+        wilcoxon(training_files[f], args.output_directory)
+        #order_results(training_files[f], args.column_names, args.output_directory)
         
-
 
 if __name__ == '__main__':
 
@@ -359,11 +363,21 @@ if __name__ == '__main__':
                         metavar="evalFuncs",
                         default=None,
                         help="indicates which functions to be combined if so needed")
+    parser.add_argument("--evaluation-functions-list",
+                        type=str,
+                        metavar="evalFuncsList",
+                        default=None,
+                        help="indicates which functions to be used to run C45 multiple times")                    
     parser.add_argument("--combination-size",
                         type=int,
                         metavar='k',
                         default=2,
                         help="indicates the size of the combination for the evaluation functions")
+    parser.add_argument("--column-names",
+                        type=str,
+                        metavar='colNames',
+                        default=None,
+                        help="Gets the column names from a csv file")
     
 
     

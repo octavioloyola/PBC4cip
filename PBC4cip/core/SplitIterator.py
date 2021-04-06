@@ -124,12 +124,17 @@ class NumericSplitIterator(SplitIterator):
                 f"Feature type {self.Feature[1]} is not considered")
 
         instList = list(instances)
-        self.__sortedInstances = list(
+        filteredInsts = list(
             filter(lambda element: not self.IsMissing(element[0]), instList))
-
-        sortedInsts = sorted(instList, key=lambda element: element[0][self.GetFeatureIdx()])
+        sortedInsts = sorted(filteredInsts, key=lambda element: element[0][self.GetFeatureIdx()])
         self.__sortedInstances = sortedInsts
+        #self.__sortedInstances = list(
+            #filter(lambda element: not self.IsMissing(element[0]), instList))
 
+        #sortedInsts = sorted(self.__sortedInstances, key=lambda element: element[0][self.GetFeatureIdx()])
+        #self.__sortedInstances = sortedInsts
+        #sortedInsts =  sorted(instList, key=lambda element: element[0][self.GetFeatureIdx()])
+        #self.__sortedInstances = sortedInsts
 
         self.CurrentDistribution[0] = [0]*self._numClasses
         self.CurrentDistribution[1] = FindDistribution(

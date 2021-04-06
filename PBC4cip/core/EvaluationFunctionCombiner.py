@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from .DistributionEvaluator import Twoing, QuinlanGain, GiniImpurity, MultiClassHellinger, ChiSquared
-from .DistributionEvaluator import DKM, G_Statistic, MARSH, NormalizedGain, KolmogorovDependence
+from .DistributionEvaluator import DKM, G_Statistic, MARSH, NormalizedGain, KolmogorovDependence, MultiClassBhattacharyya
 from .Helpers import smallest_idx
 
 class EvaluationFunctionCombiner:
@@ -48,7 +48,8 @@ class EvaluationFunctionCombiner:
                 'g-statistic': G_Statistic,
                 'marsh': MARSH,
                 'normalized gain': NormalizedGain,
-                'kolmogorov': KolmogorovDependence
+                'kolmogorov': KolmogorovDependence,
+                'bhattacharyya': MultiClassBhattacharyya
             }
         return {key:value for (key,value) in evaluator_dict.items() if key in func_names}
 

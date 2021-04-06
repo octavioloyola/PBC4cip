@@ -219,6 +219,40 @@ def NormalizedGain(parent, children):
     result /= math.log(len(children), 2)
     return result
 
+def MultiClassBhattacharyya(parent, children):
+    if len(children) != 2:
+        raise Exception(f"Multi class Bhattacharyya needs only 2 nodes \
+        for its children ")
+
+    if sum(parent) == max(parent):
+        return 0
+
+    bhattacharyya = float('-inf')
+    for i,value in enumerate(parent):
+        try:
+            negativeTotal =  __SumDifferent(parent, i)
+            positiveLeft = math.sqrt(children[0][i] / parent[i])
+            negativeLeft = math.sqrt(__SumDifferent(children[0], i) / negativeTotal)
+            positiveRight = math.sqrt(children[1][i] / parent[i])
+            negativeRight = math.sqrt(__SumDifferent(children[1],i) / negativeTotal)
+            curr_value = math.sqrt(1-(math.sqrt(positiveLeft * negativeLeft) + math.sqrt(positiveRight * negativeRight)))
+        except ValueError:
+            curr_value = float('nan')
+        except ZeroDivisionError:
+            curr_value = float('nan')
+
+        if curr_value > bhattacharyya:
+            bhattacharyya = curr_value
+
+        if bhattacharyya == float('inf'):
+            raise Exception('Infinite value in Bhattacharyya')
+        try:
+            res = math.sqrt(bhattacharyya)
+        except ValueError:
+            res = float('nan')
+        
+        return res
+        
 def __SumDifferent(vector, index):
     sumValue = 0
     for i in range(len(vector)):

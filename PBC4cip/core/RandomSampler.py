@@ -5,7 +5,8 @@ def SampleWithoutRepetition(poulation, sampleSize):
         map(lambda attribute: attribute, poulation)), sampleSize)
     
     #fixedPopulation = ['a0', 'a1', 'a2', 'a3']
-    fixedPopulation = ['a0', 'a2', 'a8', 'a4']
+    #fixedPopulation = ['STDs(number)', 'Smokes', 'NumOfPregnancies', 'IUD']
+    fixedPopulation = ['V1', 'a1']
     #return fixedPopulation
     #print(result)
     return result

@@ -1,10 +1,13 @@
-import os
 import csv
 import math
-from tqdm import tqdm
-from scipy import stats
-import pandas as pd
+import os
+
+import baycomp
 import numpy as np
+import pandas as pd
+from scipy import stats
+from tqdm import tqdm
+
 
 def show_results(confusion, acc, auc, numPatterns):
     print()
@@ -185,67 +188,79 @@ def wilcoxon(fileDir, output_directory):
     acc_results_out.close()
 
 
-def wilcoxon_old(fileDir, output_directory):
+def bayesian(fileDir, output_directory):
     df = pd.read_csv(fileDir)
-    auc_df = df.filter(regex='-AUC')
-    acc_df = df.filter(regex='-Acc')
-    #auc_df['File'] = df['File']
-    #acc_df['File'] = df['File']
-    #print(auc_df.columns)
-    #print(auc_df)
-    #print(acc_df)
-    auc_lst = []
-    W_pos_auc_lst = []
-    W_neg_auc_lst = []
-    for col_x in auc_df.columns:
-        for col_y in auc_df.columns:
+    num_df = df.drop(columns=['File'])
+
+    result_lst = []
+    p_left_lst = []
+    p_rope_lst = []
+    p_right_lst = []
+
+    for col_x in tqdm(num_df.columns, desc=f"Performing bayesian analysis...", unit="col_x", leave=False):
+        for col_y in tqdm(num_df.columns, desc=f"vs {col_x}...", unit="col_y", leave=False):
             if col_x != col_y:
-                w, p = stats.wilcoxon(auc_df[f'{col_x}'], auc_df[f'{col_y}'])
-                auc_lst.append(p)
-                auc_diff = [auc_df[f'{col_x}'][i] - auc_df[f'{col_y}'][i] for i in range(len(auc_df[f'{col_x}']))]
-                auc_sign_idx_pos = [i for i in range(len(auc_diff)) if auc_diff[i] > 0]
-                auc_sign_idx_neg = [i for i in range(len(auc_diff)) if auc_diff[i] < 0]
-                auc_abs_diff = [abs(x) for x in auc_diff]
-                auc_ranks = stats.rankdata(auc_abs_diff, method='dense')
-                W_pos = sum([auc_ranks[i] for i in range(len(auc_ranks)) if i in auc_sign_idx_pos ])
-                W_pos_auc_lst.append(W_pos)
-                W_neg = sum([auc_ranks[i] for i in range(len(auc_ranks)) if i in auc_sign_idx_neg ])
-                W_neg_auc_lst.append(W_neg)
-    
-    acc_lst = []
-    W_pos_acc_lst = []
-    W_neg_acc_lst = []
+                x,y = map(np.asarray, (num_df[f'{col_x}'],num_df[f'{col_y}']))
+                left,rope,right = baycomp.two_on_multiple(x,y, rope = 0.01)
+                p_left_lst.append(left)
+                p_rope_lst.append(rope)
+                p_right_lst.append(right)
 
-    for col_x in acc_df.columns:
-        for col_y in acc_df.columns:
-            if col_x != col_y:
-                w, p = stats.wilcoxon(acc_df[f'{col_x}'], acc_df[f'{col_y}'])
-                acc_lst.append(p)
-                acc_diff = [acc_df[f'{col_x}'][i] - acc_df[f'{col_y}'][i] for i in range(len(acc_df[f'{col_x}']))]
-                acc_sign_idx_pos = [i for i in range(len(acc_diff)) if acc_diff[i] > 0]
-                acc_sign_idx_neg = [i for i in range(len(acc_diff)) if acc_diff[i] < 0]
-                acc_abs_diff = [abs(x) for x in acc_diff]
-                acc_ranks = stats.rankdata(acc_abs_diff)
-                W_pos = sum([acc_ranks[i] for i in range(len(acc_ranks)) if i in acc_sign_idx_pos ])
-                W_pos_acc_lst.append(W_pos)
-                W_neg = sum([acc_ranks[i] for i in range(len(acc_ranks)) if i in acc_sign_idx_neg ])
-                W_neg_acc_lst.append(W_neg)
-
-
-                #acc_diff = [acc_df[f'{col_x}'][i] - acc_df[f'{col_y}'][i] for i in range(len(acc_df[f'{col_x}']))]
-    #print(stats.wilcoxon(auc_df['QuinlanGain-G-Statistic-AUC'], auc_df['QuinlanGain-MCH-AUC']))
-    print(auc_lst)
-    print(len(auc_lst))
-    print(W_pos_auc_lst)
-    print(W_neg_auc_lst)
-    output_directory = output_directory + "\\stat-tests"
+    output_directory = output_directory + "\\bayesian-tests"
 
     if not os.path.exists(output_directory):
-        print(f"Creating stat test directory: {output_directory}")
+        print(f"Creating bayesian test directory: {output_directory}")
         os.makedirs(output_directory)
         
+    result_name = os.path.splitext(os.path.basename(fileDir))[0]
+    print(f"len: {len(os.path.splitext(os.path.basename(fileDir)))}")
+    print(f"{os.path.splitext(os.path.basename(fileDir))}")
+    result_name = os.path.join(output_directory, result_name +'-xxa.csv')
+
+    action = "Writing"
+    if os.path.exists(result_name):
+        action = "Overwriting"
+        os.remove(result_name)
+    
+    results_out = open(result_name, "a", newline='\n', encoding='utf-8')
+    results_out.write(f"Combination,P-Left,P-ROPE,P-Right\n")
+    idx = 0
+    for i, col_x in enumerate(num_df.columns):
+        for j, col_y in enumerate(num_df.columns):
+            if col_x != col_y:
+                combination = col_x[0:len(col_x)-4] + " vs " +  col_y[0:len(col_y)-4]
+                results_out.write(f"{combination},{str(p_left_lst[idx])},{str(p_rope_lst[idx])},{str(p_right_lst[idx])}\n")
+                idx = idx+1
+        results_out.write(f"\n")
+    results_out.close()
+
+
+
+def average_k_runs_cross_validation(fileDir, k, output_directory):
+    df = pd.read_csv(fileDir)
+    chunk_size = len(df['File']) // k
+    auc_df = df.filter(regex='-AUC')
+    acc_df = df.filter(regex='-Acc')
+
+    auc_lst = []
+    acc_lst = []
+
+    for col_x in df.columns:
+        avg = [np.average(x) for x in np.split(auc_df[f'{col_x}'], chunk_size)]
+        auc_lst.append(avg)
+
+    for col_x in acc_df.columns:
+        avg = [np.average(x) for x in np.split(acc_df[f'{col_x}'], chunk_size)]
+        acc_lst.append(avg)
+
+    output_directory = output_directory + "\\order-results"
+
+    if not os.path.exists(output_directory):
+        print(f"Creating order results directory: {output_directory}")
+        os.makedirs(output_directory)
+
     auc_name = os.path.splitext(os.path.basename(fileDir))[0]
-    auc_name = os.path.join(output_directory, auc_name +'-auc.csv')
+    auc_name = os.path.join(output_directory, auc_name +'-auc-avg.csv')
 
     action = "Writing"
     if os.path.exists(auc_name):
@@ -253,18 +268,14 @@ def wilcoxon_old(fileDir, output_directory):
         os.remove(auc_name)
     
     auc_results_out = open(auc_name, "a", newline='\n', encoding='utf-8')
-    auc_results_out.write(f"Combination,P-Value,W-Pos,W-Neg\n")
-    idx = 0
-    for i, col_x in enumerate(auc_df.columns):
-        for j, col_y in enumerate(auc_df.columns):
-            if col_x != col_y:
-                combination = col_x[0:len(col_x)-4] + " vs " +  col_y[0:len(col_y)-4]
-                auc_results_out.write(f"{combination},{str(auc_lst[idx])},{str(W_pos_auc_lst[idx])},{str(W_neg_auc_lst[idx])}\n")
-                idx = idx+1
-        auc_results_out.write(f"\n")
+    auc_results_out.write('File,'+",".join(auc_df.columns)+"\n")
+    for i in range(chunk_size):
+            result = [str(auc_lst[idx][i]) for idx in range(len(auc_lst))]
+            auc_results_out.write(str(df.at[i * k,'File'])+','+",".join(result)+"\n")
+    auc_results_out.close()
 
     acc_name = os.path.splitext(os.path.basename(fileDir))[0]
-    acc_name = os.path.join(output_directory, acc_name+'-acc.csv')
+    acc_name = os.path.join(output_directory, acc_name +'-acc-avg.csv')
 
     action = "Writing"
     if os.path.exists(acc_name):
@@ -272,15 +283,11 @@ def wilcoxon_old(fileDir, output_directory):
         os.remove(acc_name)
     
     acc_results_out = open(acc_name, "a", newline='\n', encoding='utf-8')
-    acc_results_out.write(f"Combination,P-Value,W-Pos,W-Neg\n")
-    idx = 0
-    for i, col_x in enumerate(acc_df.columns):
-        for j, col_y in enumerate(acc_df.columns):
-            if col_x != col_y:
-                combination = col_x[0:len(col_x)-4] + " vs " + col_y[0:len(col_y)-4]
-                acc_results_out.write(f"{combination},{str(acc_lst[idx])},{str(W_pos_acc_lst[idx])},{str(W_neg_acc_lst[idx])}\n")
-                idx = idx+1
-        acc_results_out.write(f"\n")
+    acc_results_out.write('File,'+",".join(acc_df.columns)+"\n")
+    for i in range(chunk_size):
+            result = [str(acc_lst[idx][i]) for idx in range(len(acc_lst))]
+            acc_results_out.write(str(df.at[i * k,'File'])+','+",".join(result)+"\n")
+    acc_results_out.close()
 
 def WritePatternsCSV(patterns, originalFile, outputDirectory, suffix=None):
     if not patterns or len(patterns) == 0:

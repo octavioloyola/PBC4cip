@@ -163,7 +163,6 @@ def NormalizeVotes(values):
     return result
 
 def __obtainAUCBinary(tp, tn, fp, fn):
-        #print(f"tp {tp} tn {tn} fp {fp} fn {fn}")
         nPos = tp +fn
         nNeg = tn + fp
 
@@ -187,7 +186,6 @@ def __obtainAUCBinary(tp, tn, fp, fn):
 
 def obtainAUCMulticlass(confusion, num_classes):
     sumVal = 0
-    #confusion = [[69, 7],[8, 53]]
     for i in range(num_classes):
         tp = confusion[i][i]
         

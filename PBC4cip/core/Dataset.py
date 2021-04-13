@@ -230,11 +230,13 @@ class FeatureInformation(object):
             for value in range(len(self.Distribution)):
                 self.Distribution[value] = len(
                     list(filter(lambda instance: self.Dataset.GetFeatureValue(self.Feature, instance) == value and not self.Dataset.IsMissing(self.Feature, instance), self.Dataset.Instances)))
-            self.ValueProbability = list(
-                map(lambda value: value / sum(self.Distribution), self.Distribution))
+            #self.ValueProbability = list(
+                #map(lambda value: value / sum(self.Distribution), self.Distribution))
             
-            self.Ratio = list(
-                map(lambda value: value / min(self.Distribution), self.Distribution))
+            #self.Ratio = list(
+                #map(lambda value: value / min(self.Distribution), self.Distribution))
+
+            
 
         else:
             if len(nonMissingValues) > 0:

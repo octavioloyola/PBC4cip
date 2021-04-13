@@ -19,7 +19,7 @@ from core.SupervisedClassifier import DecisionTreeClassifier
 
 from core.Helpers import ArgMax, convert_to_ndarray, get_col_dist, get_idx_val
 from core.Dataset import Dataset, FileDataset, PandasDataset
-from core.ResultsAnalyzer import show_results, wilcoxon, order_results
+from core.ResultsAnalyzer import show_results, wilcoxon, order_results,bayesian, average_k_runs_cross_validation
 from datetime import datetime
 
 def CheckSuffix(file, suffix):
@@ -262,16 +262,28 @@ def Execute(args):
 
     for f in tra:
         tra.set_description(f"Working from {training_files[f]}")
-        #test_PBC4cip(training_files[f], args.output_directory, args.tree_count, args.multivariate,
-            #args.filtering,  testing_files[f], resultsId, args.delete_binary, args.distribution_evaluation )
-        #run_C45(training_files[f], args.output_directory,  testing_files[f], resultsId, args.distribution_evaluation
-        #, args.evaluation_functions)
-        #run_C45_combinations(training_files[f], args.output_directory,  testing_files[f], resultsId, args.distribution_evaluation
-        #, args.evaluation_functions, args.combination_size)
-        #run_C45_multiple(training_files[f], args.output_directory,  testing_files[f], resultsId
-        #, args.evaluation_functions, args.evaluation_functions_list)
-        wilcoxon(training_files[f], args.output_directory)
-        #order_results(training_files[f], args.column_names, args.output_directory)
+        if args.analysis == 'PBC4cip':
+            test_PBC4cip(training_files[f], args.output_directory, args.tree_count, args.multivariate,
+            args.filtering,  testing_files[f], resultsId, args.delete_binary, args.distribution_evaluation )
+        elif args.analysis == 'runC45':
+            run_C45(training_files[f], args.output_directory,  testing_files[f], resultsId, args.distribution_evaluation
+            , args.evaluation_functions)
+        elif args.analysis == 'runC45Combinations':
+            run_C45_combinations(training_files[f], args.output_directory,  testing_files[f], resultsId, args.distribution_evaluation
+            , args.evaluation_functions, args.combination_size)
+        elif args.analysis == 'runC45Multiple':
+            run_C45_multiple(training_files[f], args.output_directory,  testing_files[f], resultsId
+            , args.evaluation_functions, args.evaluation_functions_list)
+        elif args.analysis == 'wilcoxon':
+            wilcoxon(training_files[f], args.output_directory)
+        elif args.analysis == 'bayesian':
+            bayesian(training_files[f], args.output_directory)
+        elif args.analysis == 'orderResults':
+            order_results(training_files[f], args.column_names, args.output_directory)
+        elif args.analysis == 'average-cv':
+            average_k_runs_cross_validation(training_files[f], args.cross_validation_k, args.output_directory)
+        else:
+            raise Exception(f'Analysis mode {args.analysis} not supported')
         
 
 if __name__ == '__main__':
@@ -378,6 +390,16 @@ if __name__ == '__main__':
                         metavar='colNames',
                         default=None,
                         help="Gets the column names from a csv file")
+    parser.add_argument("--analysis",
+                        type=str,
+                        metavar='mode',
+                        default=None,
+                        help="Sets the desired type of analysis to be ran")
+    parser.add_argument("--cross-validation-k",
+                        type=int,
+                        metavar='cvk',
+                        default=5,
+                        help="Sets the amount of cv runs that are present in the dataset")
     
 
     

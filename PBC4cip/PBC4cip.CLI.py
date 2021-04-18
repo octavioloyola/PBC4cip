@@ -19,11 +19,13 @@ from core.SupervisedClassifier import DecisionTreeClassifier
 
 from core.Helpers import ArgMax, convert_to_ndarray, get_col_dist, get_idx_val
 from core.Dataset import Dataset, FileDataset, PandasDataset
-from core.ResultsAnalyzer import show_results, wilcoxon, order_results,bayesian, average_k_runs_cross_validation
+from core.ResultsAnalyzer import show_results, wilcoxon, order_results, separate
+from core.ResultsAnalyzer import one_bayesian_one, multiple_bayesian_multiple, one_bayesian_multiple
+from core.ResultsAnalyzer import average_k_runs_cross_validation, read_shdz_results
 from datetime import datetime
 
 def CheckSuffix(file, suffix):
-    if not suffix or len(suffix) == 0:
+    if not suffix or len(suffix) == 1:
         return True
     if not suffix in file or len(suffix) >= len(file):
         return False
@@ -48,16 +50,16 @@ def import_data(trainFile, testFile):
 
     return train, test
 
-def run_C45(trainFile, outputDirectory, testFile, resultsId, distribution_evaluator, evaluationFunctionDir ):
-    with open(evaluationFunctionDir, "r") as f:
-        eval_functions = f.readlines()
-        eval_functions = [line.replace("\n", "") for line in eval_functions]
-   
+def run_C45(trainFile, outputDirectory, testFile, resultsId, distribution_evaluator, evaluationFunctionDir=None ):
+    eval_functions = None
     X_train, y_train = returnX_y(trainFile)
     X_test, y_test = returnX_y(testFile)
     file_dataset = FileDataset(trainFile)
     dt_builder = DecisionTreeBuilder(file_dataset, X_train, y_train)
     if distribution_evaluator == 'combiner':
+        with open(evaluationFunctionDir, "r") as f:
+            eval_functions = f.readlines()
+            eval_functions = [line.replace("\n", "") for line in eval_functions]
         dt_builder.distributionEvaluator = get_distribution_evaluator(distribution_evaluator)(eval_functions)
     else:
         dt_builder.distributionEvaluator = get_distribution_evaluator(distribution_evaluator)
@@ -276,12 +278,20 @@ def Execute(args):
             , args.evaluation_functions, args.evaluation_functions_list)
         elif args.analysis == 'wilcoxon':
             wilcoxon(training_files[f], args.output_directory)
-        elif args.analysis == 'bayesian':
-            bayesian(training_files[f], args.output_directory)
+        elif args.analysis == 'mult-bayesian-mult':
+            multiple_bayesian_multiple(training_files[f], args.output_directory, args.runs)
+        elif args.analysis == 'one-bayesian-mult':
+            one_bayesian_multiple(training_files[f], args.cross_validation_k, args.output_directory, args.runs)
+        elif args.analysis == 'one-bayesian-one':
+            one_bayesian_one(training_files[f], args.cross_validation_k, args.output_directory, args.runs)
         elif args.analysis == 'orderResults':
             order_results(training_files[f], args.column_names, args.output_directory)
         elif args.analysis == 'average-cv':
             average_k_runs_cross_validation(training_files[f], args.cross_validation_k, args.output_directory)
+        elif args.analysis == 'shdz':
+            read_shdz_results(training_files[f], args.filename, args.output_directory)
+        elif args.analysis == 'separate':
+            separate(training_files[f], args.output_directory)
         else:
             raise Exception(f'Analysis mode {args.analysis} not supported')
         
@@ -400,6 +410,17 @@ if __name__ == '__main__':
                         metavar='cvk',
                         default=5,
                         help="Sets the amount of cv runs that are present in the dataset")
+    parser.add_argument("--filename",
+                        type=str,
+                        metavar='filename',
+                        default='',
+                        help="Sets filename for reading Shdz files")
+    parser.add_argument("--runs",
+                        type=int,
+                        metavar='runs',
+                        default=None,
+                        help="Sets amount of runs for bayesian analysis")
+
     
 
     

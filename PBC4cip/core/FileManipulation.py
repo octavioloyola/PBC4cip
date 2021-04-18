@@ -177,10 +177,10 @@ functions_to_combine=None ):
         results_out = open(name, "a+", newline='\n', encoding='utf-8')
     elif functions_to_combine is None:
         results_out = open(name, "w+", newline='\n', encoding='utf-8')
-        results_out.write(f"File,AUC,ACC,NumPatterns,Filtering,distribution_evaluator\n")
+        results_out.write(f"File,AUC,Acc,NumPatterns,Filtering,distribution_evaluator\n")
     else:
         results_out = open(name, "w+", newline='\n', encoding='utf-8')
-        results_out.write(f"File,AUC,ACC,NumPatterns,Filtering,distribution_evaluator,eval_functions\n")
+        results_out.write(f"File,AUC,Acc,NumPatterns,Filtering,distribution_evaluator,eval_functions\n")
 
 
     if functions_to_combine is None:

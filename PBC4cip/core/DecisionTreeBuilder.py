@@ -98,13 +98,14 @@ class DecisionTreeBuilder():
             filteredObjMembership, self.Dataset.Model, self.Dataset.Class)
 
         result.TreeRootNode = DecisionTreeNode(parentDistribution)
-        #print(f"TreeRootNode: {result.TreeRootNode.Data}")
+        print(f"TreeRootNode: {result.TreeRootNode.Data}")
 
         self.__FillNode(result.TreeRootNode,
                       filteredObjMembership, 0, currentContext)
         return result
 
     def __FillNode(self, node, instanceTuples, level, currentContext):
+        print(f"nodeData: {node.Data} level: {level} instanceTuples: {len(instanceTuples)}")
         if self.StopCondition(node.Data, self.Dataset.Model, self.Dataset.Class):
             #print(f"Stopped by stopCondition {self.StopCondition}")
             return
@@ -120,18 +121,27 @@ class DecisionTreeBuilder():
         
         sampleFeatures = self.OnSelectingFeaturesToConsider(
             list(map(lambda attribute: attribute[0], self.Dataset.Attributes)), self.FeatureCount)
+        #print(f"sampleFeatures: {sampleFeatures}")    
         if isinstance(self.distributionEvaluator, types.FunctionType):
             for feature in sampleFeatures:
                 if feature != self.Dataset.Class[0]:
                     splitIterator = self.SplitIteratorProvider.GetSplitIterator(feature)
+                    if node.Data[2] == 2536.0:
+                        print(f"feature: {feature}")
                     splitIterator.Initialize(instanceTuples)
+                    if node.Data[2] == 2536.0:
+                            print(f"nodeData: {node.Data} currDist: {splitIterator.CurrentDistribution}")
                     while splitIterator.FindNext():
                         currentGain = self.distributionEvaluator(
                             node.Data, splitIterator.CurrentDistribution)
+                        if node.Data[2] == 2536.0:
+                            print(f"nodeData: {node.Data} currDist: {splitIterator.CurrentDistribution}")
+                            print(f"currentGain: {currentGain}")
                         if currentGain >= self.MinimalSplitGain:
                             winningSplitSelector.EvaluateThis(
                                 currentGain, splitIterator)
         else:
+            print(f"never!\n\n\n\n\n")
             for feature in sampleFeatures:
                 if feature != self.Dataset.Class[0]:
                     splitIterator = self.SplitIteratorProvider.GetSplitIterator(feature)
@@ -153,13 +163,19 @@ class DecisionTreeBuilder():
 
                 
         if winningSplitSelector.IsWinner():
-            #print(f"list: {winningSplitSelector.List}")
+            #print(f"list: {winningSplitSelector.List[0][1]}")
             maxSelector = winningSplitSelector.WinningSelector
             node.ChildSelector = maxSelector
             node.Children = list()
+            if level == 0 or level == 1 or level == 2:
+                pass
+                #print(f"lenInstances: {len(instanceTuples)} maxSelec: {maxSelector} minInstMemb: {self.MinimalInstanceMembership}")
             instancesPerChildNode = CreateChildrenInstances(
                 instanceTuples, maxSelector, self.MinimalInstanceMembership)
 
+            if level == 0 or level == 1 or level == 2:
+                for elem in instancesPerChildNode:
+                    print(f"elem: {len(elem)}")
             for index in range(maxSelector.ChildrenCount):
                 childNode = DecisionTreeNode(winningSplitSelector.WinningDistribution[index])
                 childNode.Parent = node
@@ -172,12 +188,13 @@ class DecisionTreeBuilder():
 
 
 def CreateChildrenInstances(instances, selector, threshold):
-
+    #print(f"createChildrenInstances: {len(instances)} selector: {selector} ths{threshold}")
     result = list()
     for child in range(selector.ChildrenCount):
         result.append(list(tuple()))
-
+    print(f"selector: {type(selector)}")
     for instance in instances:
+        #print(f"instanceChild: {instance[0]}")
         selection = selector.Select(instance[0])
         if selection is not None:
             for index in range(len(selection)):
@@ -186,7 +203,11 @@ def CreateChildrenInstances(instances, selector, threshold):
                     if newMembership >= threshold:
                         result[index].append(
                             tuple((instance[0], newMembership)))
+        else:
+            print(f"missing??")
 
+    for i in range(len(result)):
+        print(f"resultLen: {len(result[i])}")
     return result
 
 

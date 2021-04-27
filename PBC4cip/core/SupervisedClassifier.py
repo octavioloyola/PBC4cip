@@ -23,11 +23,12 @@ class DecisionTreeClassifier(object):
 
     def ClassifyInstance(self, node, instance, instanceMembership):
         if node.IsLeaf:
+            print(f"node.IsLeaf: {MultiplyBy(node.Data, instanceMembership)}")
             return MultiplyBy(node.Data, instanceMembership)
 
         childrenSelection = node.ChildSelector.Select(instance)
         result = None
-        if (childrenSelection != None):
+        if (childrenSelection is not None):
             if (len(childrenSelection) != len(node.Children)):
                 raise Exception("Child index is out of range")
 
@@ -37,10 +38,13 @@ class DecisionTreeClassifier(object):
                     child = node.Children[i]
                     childValue = self.ClassifyInstance(
                         child, instance, instanceMembership)
-                    if result != None:
+                    if result is not None:
                         result = AddTo(result, childValue)
                     else:
                         result = childValue
+            print(f"result1: {result}")
+            return result
+
         else:
             totalNodeMembership = sum(node.Data)
             for i in range(len(node.Children)):
@@ -48,11 +52,11 @@ class DecisionTreeClassifier(object):
                 childMembership = sum(node.Children[i].Data)
                 childValue = self.ClassifyInstance(
                     child, instance, childMembership / (totalNodeMembership * instanceMembership))
-                if result != None:
+                if result is not None:
                     result = AddTo(result, childValue)
                 else:
                     result = childValue
-                    
+        print(f"result2: {result}")            
         return result
 
     def Classify(self, instance):

@@ -21,7 +21,8 @@ from core.Helpers import ArgMax, convert_to_ndarray, get_col_dist, get_idx_val
 from core.Dataset import Dataset, FileDataset, PandasDataset
 from core.ResultsAnalyzer import show_results, wilcoxon, order_results, separate
 from core.ResultsAnalyzer import one_bayesian_one, multiple_bayesian_multiple, one_bayesian_multiple
-from core.ResultsAnalyzer import average_k_runs_cross_validation, read_shdz_results
+from core.ResultsAnalyzer import average_k_runs_cross_validation, read_shdz_results, read_confusion_matrix
+
 from datetime import datetime
 
 def CheckSuffix(file, suffix):
@@ -56,6 +57,7 @@ def run_C45(trainFile, outputDirectory, testFile, resultsId, distribution_evalua
     X_test, y_test = returnX_y(testFile)
     file_dataset = FileDataset(trainFile)
     dt_builder = DecisionTreeBuilder(file_dataset, X_train, y_train)
+    
     if distribution_evaluator == 'combiner':
         with open(evaluationFunctionDir, "r") as f:
             eval_functions = f.readlines()
@@ -63,6 +65,7 @@ def run_C45(trainFile, outputDirectory, testFile, resultsId, distribution_evalua
         dt_builder.distributionEvaluator = get_distribution_evaluator(distribution_evaluator)(eval_functions)
     else:
         dt_builder.distributionEvaluator = get_distribution_evaluator(distribution_evaluator)
+
     dt_builder.FeatureCount = int(math.log(len(file_dataset.Attributes), 2) + 1)
     dt_builder.OnSelectingFeaturesToConsider = SampleWithoutRepetition
     dt = dt_builder.Build()
@@ -290,6 +293,8 @@ def Execute(args):
             average_k_runs_cross_validation(training_files[f], args.cross_validation_k, args.output_directory)
         elif args.analysis == 'shdz':
             read_shdz_results(training_files[f], args.filename, args.output_directory)
+        elif args.analysis == 'validate-auc':
+            read_confusion_matrix(training_files[f], args.filename, args.output_directory)
         elif args.analysis == 'separate':
             separate(training_files[f], args.output_directory)
         else:

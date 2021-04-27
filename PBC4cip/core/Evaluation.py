@@ -196,7 +196,6 @@ def obtainAUCMulticlass(confusion, num_classes):
             tn = confusion[j][j]
             sumVal = sumVal + __obtainAUCBinary(tp, tn, fp, fn)
     
-    print(tp, fp, fn, tn)
     avg = (sumVal * 2) / (num_classes * (num_classes-1))
     return avg
 

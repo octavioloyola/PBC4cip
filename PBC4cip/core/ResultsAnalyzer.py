@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 from tqdm import tqdm
+from .Evaluation import obtainAUCMulticlass
 
 
 def show_results(confusion, acc, auc, numPatterns):
@@ -300,6 +301,7 @@ def multiple_bayesian_multiple(fileDir, output_directory, runs=1):
                 p_left_lst[ix][iy] = left 
                 p_rope_lst[ix][iy] = rope
                 p_right_lst[ix][iy] = right
+                print(f"left: {left} rope: {rope} right: {right}")
 
                 results_out.write(f"{combination},{str(left)},{str(rope)},{str(right)}\n")
             elif col_x != col_y:
@@ -309,20 +311,6 @@ def multiple_bayesian_multiple(fileDir, output_directory, runs=1):
         iy = iy+1
         results_out.write(f"\n")
     results_out.close() 
-
-
-    """
-    idx = 0
-    for i, col_x in enumerate(num_df.columns):
-        for j, col_y in enumerate(num_df.columns):
-            if col_x != col_y:
-                combination = col_x[0:len(col_x)-4] + " vs " +  col_y[0:len(col_y)-4]
-                results_out.write(f"{combination},{str(p_left_lst[idx])},{str(p_rope_lst[idx])},{str(p_right_lst[idx])}\n")
-                idx = idx+1
-        results_out.write(f"\n")
-    results_out.close()
-    """
-
 
 def separate(fileDir, output_directory):
     df = pd.read_csv(fileDir)
@@ -366,7 +354,7 @@ def average_k_runs_cross_validation(fileDir, k, output_directory):
         os.makedirs(output_directory)
 
     auc_name = os.path.splitext(os.path.basename(fileDir))[0]
-    auc_name = os.path.join(output_directory, auc_name +'-auc-avg.csv')
+    auc_name = os.path.join(output_directory, auc_name +'-avg-k' + str(k) + '.csv')
 
     action = "Writing"
     if os.path.exists(auc_name):
@@ -398,7 +386,6 @@ def average_k_runs_cross_validation(fileDir, k, output_directory):
 def read_shdz_results(fileDir, fileName, outputDirectory):
     auc = None
     acc = None
-    #print(f"fileDir: {fileName}")
     names = fileDir.split("-")
     with open(fileDir, "r") as f:
             for line in f:
@@ -409,13 +396,13 @@ def read_shdz_results(fileDir, fileName, outputDirectory):
                     elif newline.split()[0] == 'ACC':
                         acc = newline.split()[1]
             
-
+    
     if not os.path.exists(outputDirectory):
         print(f"Creating output directory: {outputDirectory}")
         os.makedirs(outputDirectory)
 
     name = os.path.splitext(os.path.basename(fileName))[0]
-    name = os.path.join(outputDirectory, name+'-ordered.csv')
+    name = os.path.join(outputDirectory, name+'-shdz.csv')
 
     action = "Writing"
     if os.path.exists(name):
@@ -426,6 +413,53 @@ def read_shdz_results(fileDir, fileName, outputDirectory):
         results_out.write(f"File,AUC,Acc\n")
 
     results_out.write(f"{'-'.join(names[2:])},{str(auc)},{str(acc)}\n")
+    results_out.close()
+    return name
+
+def read_confusion_matrix(fileDir, fileName, outputDirectory):
+    flag = False
+    num_classes = 0
+    confusion_matrix = []
+    names = fileDir.split("-")
+    with open(fileDir, "r") as f:
+            for line in f:
+                if line != '\n':
+                    newline = line
+                    if newline.split()[0] == 'Classes':
+                        num_classes = int (newline.split()[1])
+                    if newline.split()[0] == 'F1':
+                        flag = True
+                    elif flag:
+                        matrix_line = newline.split()
+                        matrix_line = [int(x) for x in matrix_line]
+                        confusion_matrix.append(matrix_line)
+            
+    outputDirectory = outputDirectory + "\\confusion_matrix"
+
+    if not os.path.exists(outputDirectory):
+        print(f"Creating output directory: {outputDirectory}")
+        os.makedirs(outputDirectory)
+
+    name = os.path.splitext(os.path.basename(fileName))[0]
+    name = os.path.join(outputDirectory, name+'-cf-matrix.csv')
+
+    print()
+    for i in range(len(confusion_matrix[0])):
+        for j in range(len(confusion_matrix[0])):
+            print(f"{confusion_matrix[i][j]} ", end='')
+        print("")
+    
+    auc = obtainAUCMulticlass(confusion_matrix, num_classes)
+
+    action = "Writing"
+    if os.path.exists(name):
+        action = "Appending"
+        results_out = open(name, "a+", newline='\n', encoding='utf-8')
+    else:
+        results_out = open(name, "w", newline='\n', encoding='utf-8')
+        results_out.write(f"File,AUC\n")
+
+    results_out.write(f"{'-'.join(names[2:])},{str(auc)}\n")
     results_out.close()
     return name
 

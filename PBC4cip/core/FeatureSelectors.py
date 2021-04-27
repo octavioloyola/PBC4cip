@@ -31,6 +31,7 @@ class SingleFeatureSelector(object):
 
     def Select(self, instance):
         if self.Dataset.IsMissing(self.Feature, instance):
+            #print(f"missingCutPoint")
             return None
 
     def __format__(self, index):
@@ -49,6 +50,9 @@ class CutPointSelector(SingleFeatureSelector):
         super().Select(instance)
         if self.Dataset.IsNominalFeature(self.Feature):
             raise Exception("Cannot use cutpoint on nominal data")
+        if math.isnan(self.Dataset.GetFeatureValue(self.Feature, instance)):
+            return None 
+        #print(f"feature: {self.Feature} getFeature {self.Dataset.GetFeatureValue(self.Feature, instance)} cutPoint: {self.CutPoint}")
         if self.Dataset.GetFeatureValue(self.Feature, instance) <= self.CutPoint:
             return [1.0, 0.0]
         else:

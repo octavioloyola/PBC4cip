@@ -99,7 +99,6 @@ class PatternMinerWithoutFiltering:
         #freeze_support()  # for Windows support
         featureCount = 0
         if self.FeatureCount != -1:
-            print(f"FeatureCountHasChanged: {self.FeatureCount}")
             featureCount = self.FeatureCount
         else:
             featureCount = int(math.log(len(self.dataset.Attributes), 2) + 1)

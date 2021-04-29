@@ -24,8 +24,6 @@ class EvaluationFunctionCombiner:
         self.borda_count_table = pd.DataFrame(self.borda_count_table)
         self.borda_count_table.columns = [f'CS{i}' for i,_ in enumerate(self.borda_count_table)]
         self.borda_count_table.index = [name for name in self.evaluation_functions]
-
-        #print(self.borda_count_table)
     
         for index in self.borda_count_table.index:
             self.borda_count_table.loc[index] = self.borda_count_table.loc[index].rank(ascending=False)

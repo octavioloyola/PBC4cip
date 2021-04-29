@@ -54,7 +54,6 @@ class Dataset(ABC):
     def GetValueOfIndex(self, feature, index):
         values = self.GetNominalValues(feature)
         if not values:
-            #print(f"None? {values}")
             return float('nan')
         else:
             return values[index]
@@ -77,8 +76,6 @@ class Dataset(ABC):
         return self.GetFeatureIdx(self.Class)
 
     def GetFeatureIdx(self, feature):
-        #print(f"getFeatureIdx")
-        #print(f"model: {self.Model}")
         return self.Model.index(feature)
     
     def IsNominalFeature(self, feature):
@@ -87,12 +84,9 @@ class Dataset(ABC):
         return isinstance(feature[1], list)
 
     def GetFeatureValue(self, feature, instance):
-        #print(f"getFeatureValue")
         if isinstance(feature[1], list):
             return self.GetIndexOfValue(feature[0], instance[self.GetFeatureIdx(feature)])
         elif feature[1].lower() in ['numeric', 'real', 'integer']:
-            #print(f"instance: {instance}")
-            #print(f"feature: {feature}")
             return instance[self.GetFeatureIdx(feature)]
         else:
             raise Exception(

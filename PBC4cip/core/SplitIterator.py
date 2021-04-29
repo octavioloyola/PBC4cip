@@ -108,7 +108,6 @@ class NumericSplitIterator(SplitIterator):
         self.__selectorFeatureValue = 0
 
     def Initialize(self, instances):
-        print(f"instancesLen: {len(instances)}")
         super().Initialize(instances)
 
         self._initialized = True
@@ -129,15 +128,7 @@ class NumericSplitIterator(SplitIterator):
             filter(lambda element: not self.IsMissing(element[0]), instList))
         sortedInsts = sorted(filteredInsts, key=lambda element: element[0][self.GetFeatureIdx()])
         self.__sortedInstances = sortedInsts
-        #self.__sortedInstances = list(
-            #filter(lambda element: not self.IsMissing(element[0]), instList))
 
-        #sortedInsts = sorted(self.__sortedInstances, key=lambda element: element[0][self.GetFeatureIdx()])
-        #self.__sortedInstances = sortedInsts
-        #sortedInsts =  sorted(instList, key=lambda element: element[0][self.GetFeatureIdx()])
-        #self.__sortedInstances = sortedInsts
-
-        print(f"sortedLen: {len(sortedInsts)}")
         self.CurrentDistribution[0] = [0]*self._numClasses
         self.CurrentDistribution[1] = FindDistribution(
             self.__sortedInstances, self.Model, self.Dataset.Class)

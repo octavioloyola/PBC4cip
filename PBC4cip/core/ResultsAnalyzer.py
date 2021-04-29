@@ -91,8 +91,6 @@ def transpose_results(fileDir, column_names, output_directory):
         result = [None]*(len(auc_result) + len(acc_result))
         result[::2] = auc_result
         result[1::2] = acc_result
-        #print(f"idx:{lst}")
-        #print(f"result:{result}\n\n")
         results_out.write(str(df.at[i,'File'])+','+",".join(result)+"\n")
     results_out.close()
 

@@ -23,7 +23,6 @@ class DecisionTreeClassifier(object):
 
     def ClassifyInstance(self, node, instance, instanceMembership):
         if node.IsLeaf:
-            print(f"node.IsLeaf: {MultiplyBy(node.Data, instanceMembership)}")
             return MultiplyBy(node.Data, instanceMembership)
 
         childrenSelection = node.ChildSelector.Select(instance)
@@ -42,7 +41,6 @@ class DecisionTreeClassifier(object):
                         result = AddTo(result, childValue)
                     else:
                         result = childValue
-            print(f"result1: {result}")
             return result
 
         else:
@@ -56,7 +54,6 @@ class DecisionTreeClassifier(object):
                     result = AddTo(result, childValue)
                 else:
                     result = childValue
-        print(f"result2: {result}")            
         return result
 
     def Classify(self, instance):

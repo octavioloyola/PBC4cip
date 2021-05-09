@@ -17,14 +17,14 @@ class Dataset(ABC):
         pass
 
     @property
+    @abstractmethod
     def Attributes(self):
-        return list(
-            filter(lambda attr: attr[0].strip().lower() != 'class', self.Model))
+        pass
 
     @property
+    @abstractmethod
     def Class(self):
-        return list(
-            filter(lambda attr: attr[0].strip().lower() == 'class', self.Model))[0]
+        pass
 
     @property
     def AttributesInformation(self):
@@ -109,6 +109,16 @@ class PandasDataset(Dataset):
     def Instances(self):
         return self.__Instances
     
+    @property
+    def Attributes(self):
+        return list(
+            filter(lambda attr: attr[0].strip().lower() != 'class', self.Model))
+
+    @property
+    def Class(self):
+        return list(
+            filter(lambda attr: attr[0].strip().lower() == 'class', self.Model))[0]
+    
     @Instances.setter
     def Instances(self, new_instances):
         self.__Instances = new_instances
@@ -119,25 +129,29 @@ class PandasDataset(Dataset):
         else:
             return self.get_feature_col_type(feature)
     def get_feature_col_type(self, feature):
-        if isinstance(feature[0], np.int32) or isinstance(feature[0], np.int64):
+        if all(isinstance(elem, np.int32) or isinstance(elem, np.int64) or isinstance(elem, int) for elem in feature):
             return 'integer'
-        elif isinstance(feature[0], np.float32) or isinstance(feature[0], np.float64):
+        if all (isinstance(elem, np.float32) or isinstance(elem, np.float64) or isinstance(elem, float) for elem in feature):
             return 'real'
-        elif isinstance(feature[0], str):
-            return 'Nominal'
         else:
-            raise Exception(f"Unsupported data type in feature {feature}")
+            return 'Nominal'
 
     def get_model_list(self, X, y):
+        if 'class' in X.columns.values.tolist():
+            raise Exception('No attribute can have the name class')
+
         result = [(feat_name, self.get_feature_info(X[f'{feat_name}'])) for feat_name in X]
+        y = y.rename(columns = {y.columns.values.tolist()[0]: 'class'})
+        y = pd.DataFrame(y)  
         class_res = [(feat_name, self.get_feature_info(y[f'{feat_name}'])) for feat_name in y]
         result.append(class_res[0])
         return result
     
     def combine_X_y(self, X, y):
-        y_name = list(y.columns)[0] 
+        y = y.rename(columns = {y.columns.values.tolist()[0]: 'class'})
+        y = pd.DataFrame(y)
         instances_df = X.copy(deep=True)
-        instances_df[f'{y_name}'] = y[f'{y_name}']
+        instances_df[f'class'] = y['class']
         return instances_df.values
             
 
@@ -161,6 +175,16 @@ class FileDataset(Dataset):
     @property
     def Instances(self):
         return self.__Instances
+    
+    @property
+    def Attributes(self):
+        return list(
+            filter(lambda attr: attr[0].strip().lower() != 'class', self.Model))
+
+    @property
+    def Class(self):
+        return list(
+            filter(lambda attr: attr[0].strip().lower() == 'class', self.Model))[0]
     
     @Instances.setter
     def Instances(self, new_instances):
@@ -213,8 +237,6 @@ class FeatureInformation(object):
         nonMissingValues = list(filter(lambda instance: not self.Dataset.IsMissing(
             self.Feature, instance), self.Dataset.Instances))
         
-        #print(f"nonMissingValues: {nonMissingValues}")
-
         self.MissingValueCount = len(
             self.Dataset.Instances) - len(nonMissingValues)
 

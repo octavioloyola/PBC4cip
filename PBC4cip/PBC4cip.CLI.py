@@ -20,8 +20,9 @@ from core.SupervisedClassifier import DecisionTreeClassifier
 from core.Helpers import ArgMax, convert_to_ndarray, get_col_dist, get_idx_val
 from core.Dataset import Dataset, FileDataset, PandasDataset
 from core.ResultsAnalyzer import show_results, wilcoxon, order_results, separate
-from core.ResultsAnalyzer import one_bayesian_one, multiple_bayesian_multiple, one_bayesian_multiple
-from core.ResultsAnalyzer import average_k_runs_cross_validation, read_shdz_results, read_confusion_matrix
+from core.ResultsAnalyzer import one_bayesian_one, multiple_bayesian_multiple
+from core.ResultsAnalyzer import one_bayesian_multiple, average_k_runs_cross_validation
+from core.ResultsAnalyzer import read_shdz_results, read_confusion_matrix, pipeline
 
 from datetime import datetime
 
@@ -58,7 +59,7 @@ def run_C45(trainFile, outputDirectory, testFile, resultsId, distribution_evalua
     file_dataset = FileDataset(trainFile)
     dt_builder = DecisionTreeBuilder(file_dataset, X_train, y_train)
     
-    if distribution_evaluator == 'combiner':
+    if distribution_evaluator == 'combiner' or distribution_evaluator == 'combiner-random':
         with open(evaluationFunctionDir, "r") as f:
             eval_functions = f.readlines()
             eval_functions = [line.replace("\n", "") for line in eval_functions]
@@ -92,15 +93,19 @@ def run_C45_multiple(trainFile, outputDirectory, testFile, resultsId, evaluation
     for func in eval_functions:
         run_C45(trainFile, outputDirectory, testFile, resultsId, func, evaluationFunctionDir)
 
-def run_C45_combinations(trainFile, outputDirectory, testFile, resultsId, distribution_evaluator, evaluationFunctionDir, combination_size):
-    if distribution_evaluator != 'combiner':
+def run_C45_combinations(trainFile, outputDirectory, testFile, resultsId, distribution_evaluator, evaluationFunctionDir,
+ combination_size, required_funcs = None):
+    if not (distribution_evaluator == 'combiner' or distribution_evaluator == 'combiner-random'):
         raise Exception(f"Evaluation measure {distribution_evaluator} not supported for run_C45_combinations")
     with open(evaluationFunctionDir, "r") as f:
         eval_functions = f.readlines()
-        eval_functions = [line.replace("\n", "") for line in eval_functions]
+        eval_functions = [line.replace("\n", "").strip() for line in eval_functions]
     
-    print(f"eval_func {eval_functions}")
-   
+    if required_funcs is not None:
+        with open(required_funcs, "r") as f:
+            required_lst = f.readlines()
+            required_lst = [line.replace("\n", "").strip() for line in required_lst]
+        
     X_train, y_train = returnX_y(trainFile)
     X_test, y_test = returnX_y(testFile)
     file_dataset = FileDataset(trainFile)
@@ -110,7 +115,27 @@ def run_C45_combinations(trainFile, outputDirectory, testFile, resultsId, distri
     dt_builder.FeatureCount = int(math.log(len(file_dataset.Attributes), 2) + 1)
     dt_builder.OnSelectingFeaturesToConsider = SampleWithoutRepetition
 
-    func_combinations = list(itertools.combinations(eval_functions, combination_size))
+    non_filtered_func_combinations = list(itertools.combinations(eval_functions, combination_size))
+    #print(f"lne: {len(non_filtered_func_combinations)}")
+    #print(f"nonFilter: {non_filtered_func_combinations} type: {type(non_filtered_func_combinations)}")
+    func_combinations = []
+    if required_funcs is not None:
+        for i in range(len(non_filtered_func_combinations)):
+            func_combinations_elem = list(non_filtered_func_combinations[i])
+            for comb in required_lst:
+                #if ((set(comb.split('-'))) == set(['Twoing', 'Chi Squared'])):
+                #if set(comb.split('-') == set(['Chi Squared', 'Twoing', 'Quinlan Gain'])):
+                    #print(f"elem: {set(comb.split('-'))} subset: {func_combinations_elem} issubset: {set(comb.split('-')).issubset(func_combinations_elem)}")
+                if set(comb.split('-')).issubset(func_combinations_elem):
+                    func_combinations.append(list(func_combinations_elem))
+    
+        func_combinations = list(x for x,_ in itertools.groupby(func_combinations))
+        print(f"filter: {func_combinations} len: {len(func_combinations)}")
+    else:
+        func_combinations = non_filtered_func_combinations
+    
+    #func_combinations =  list(set(func_combinations))
+    print(f"filter: {func_combinations}")
     for combination in func_combinations:
         dt_builder.distributionEvaluator = dt_builder.distributionEvaluator(list(combination))
         dt = dt_builder.Build()
@@ -129,25 +154,41 @@ def run_C45_combinations(trainFile, outputDirectory, testFile, resultsId, distri
         functions_to_combine=list(combination))
         show_results(confusion, acc, auc, 0)
         dt_builder.distributionEvaluator = get_distribution_evaluator(distribution_evaluator)
+    
+def split_data(train, test, class_name = 'class'):
+    if train.shape[1] != train.shape[1]:
+        raise Exception('Train and test dataset must have the same shape')
 
+    class_idx = train.columns.get_loc(class_name)
+    attr_idxs = [x for x in range(train.shape[1]) if x != class_idx]
+   
+    X_train = train.iloc[:,  attr_idxs]
+    y_train =  train.iloc[:, [class_idx]]
 
+    X_test = test.iloc[:,  attr_idxs]
+    y_test =  test.iloc[:, [class_idx]]
 
-def split_data(train, test):
-    X_train = train.iloc[:,  0:train.shape[1]-1]
-    y_train =  train.iloc[:, train.shape[1]-1 : train.shape[1]]
+    #print(str(type(X_train)) + "," + str(type(X_test)) + "," + str(type(y_train)) + "," + str(type(y_test)))
 
-    X_test = test.iloc[:,  0:test.shape[1]-1]
-    y_test =  test.iloc[:, test.shape[1]-1 : test.shape[1]]
+    y_train_str = [str(x) for x in y_train[f'{class_name}']]
+    y_test_str = [str(x) for x in y_test[f'{class_name}']]
+    y_train[f'{class_name}'] = y_train_str
+    y_test[f'{class_name}'] = y_test_str
 
     return X_train, y_train, X_test, y_test
 
 def score(predicted, y):
         y_class_dist = get_col_dist(y[f'{y.columns[0]}'])
+        #predicted_class_dist = get_col
         real = list(map(lambda instance: get_idx_val(y_class_dist, instance), y[f'{y.columns[0]}']))
         numClasses = len(y_class_dist)
+        print(f"numClasses: {numClasses}")
         confusion = [[0]*2 for i in range(numClasses)]
         classified_as = 0
         error_count = 0
+
+        print(f"predicted: {predicted} len: {len(predicted)}")
+        print(f"real: {real} len:{len(real)}")
 
         for i in range(len(real)):
             if real[i] != predicted[i]:
@@ -186,9 +227,10 @@ def Train_and_test(X_train, y_train, X_test, y_test, treeCount, multivariate, fi
     
     return patterns, confusion, acc, auc
 
-def test_PBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering, testFile, resultsId, delete, distribution_evaluator): 
+def test_PBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering, testFile, resultsId, delete, 
+distribution_evaluator, class_column): 
     #Uncomment this to work with text files instead of dataframes  
-    
+    """
     X_train, y_train = returnX_y(trainFile)
     X_test, y_test = returnX_y(testFile)
     file_dataset = FileDataset(trainFile)
@@ -204,9 +246,10 @@ def test_PBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering,
         pass
     """
     train_df, test_df = import_data(trainFile, testFile)
-    X_train, y_train, X_test, y_test = split_data(train_df, test_df)
+    X_train, y_train, X_test, y_test = split_data(train_df, test_df, class_column)
     classifier = PBC4cip(tree_count=treeCount, multivariate=multivariate, filtering=filtering, distribution_evaluator=distribution_evaluator)
     patterns = classifier.fit(X_train, y_train)
+    #print(f"lenPatterns: {len(patterns)}")
     for pattern in patterns:
         #print(f"patt: {pattern}")
         pass
@@ -215,7 +258,7 @@ def test_PBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering,
     
     y_pred = classifier.predict(X_test)
     confusion, acc, auc = score(y_pred, y_test)
-    """
+    
     #WritePatternsCSV(patterns, trainFile, outputDirectory)
     #WritePatternsBinary(patterns, trainFile, outputDirectory)
     WriteResultsCSV(confusion, acc, auc, len(patterns), testFile, outputDirectory, resultsId, filtering, distribution_evaluator)
@@ -269,13 +312,14 @@ def Execute(args):
         tra.set_description(f"Working from {training_files[f]}")
         if args.analysis == 'PBC4cip':
             test_PBC4cip(training_files[f], args.output_directory, args.tree_count, args.multivariate,
-            args.filtering,  testing_files[f], resultsId, args.delete_binary, args.distribution_evaluation )
+            args.filtering,  testing_files[f], resultsId, args.delete_binary, args.distribution_evaluation,
+             args.class_column )
         elif args.analysis == 'runC45':
             run_C45(training_files[f], args.output_directory,  testing_files[f], resultsId, args.distribution_evaluation
             , args.evaluation_functions)
         elif args.analysis == 'runC45Combinations':
             run_C45_combinations(training_files[f], args.output_directory,  testing_files[f], resultsId, args.distribution_evaluation
-            , args.evaluation_functions, args.combination_size)
+            , args.evaluation_functions, args.combination_size, args.required_funcs)
         elif args.analysis == 'runC45Multiple':
             run_C45_multiple(training_files[f], args.output_directory,  testing_files[f], resultsId
             , args.evaluation_functions, args.evaluation_functions_list)
@@ -287,7 +331,7 @@ def Execute(args):
             one_bayesian_multiple(training_files[f], args.cross_validation_k, args.output_directory, args.runs)
         elif args.analysis == 'one-bayesian-one':
             one_bayesian_one(training_files[f], args.cross_validation_k, args.output_directory, args.runs)
-        elif args.analysis == 'orderResults':
+        elif args.analysis == 'order-results':
             order_results(training_files[f], args.column_names, args.output_directory)
         elif args.analysis == 'average-cv':
             average_k_runs_cross_validation(training_files[f], args.cross_validation_k, args.output_directory)
@@ -297,6 +341,8 @@ def Execute(args):
             read_confusion_matrix(training_files[f], args.filename, args.output_directory)
         elif args.analysis == 'separate':
             separate(training_files[f], args.output_directory)
+        elif args.analysis == 'pipeline':
+            pipeline(training_files[f], args.column_names, args.output_directory ,args.cross_validation_k)
         else:
             raise Exception(f'Analysis mode {args.analysis} not supported')
         
@@ -340,6 +386,12 @@ if __name__ == '__main__':
                         metavar="'"+defaultOutputDir+"'",
                         default=defaultOutputDir,
                         help="the output directory for the patterns")
+    
+    parser.add_argument("--class-column",
+                        type=str,
+                        metavar="classColumn",
+                        default='class',
+                        help="The name of the class column (for csv files)")
 
     parser.add_argument("--multivariate",
                         type=str2bool,
@@ -400,6 +452,11 @@ if __name__ == '__main__':
                         metavar='k',
                         default=2,
                         help="indicates the size of the combination for the evaluation functions")
+    parser.add_argument("--required-funcs",
+                        type= str,
+                        metavar='required-funcs',
+                        default=None,
+                        help="Gets the required functions to perform feature selection")
     parser.add_argument("--column-names",
                         type=str,
                         metavar='colNames',

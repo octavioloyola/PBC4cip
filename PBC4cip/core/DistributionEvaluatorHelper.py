@@ -2,21 +2,23 @@ from .DistributionEvaluator import Hellinger, MultiClassBhattacharyya
 from .DistributionEvaluator import Twoing, QuinlanGain, GiniImpurity, MultiClassHellinger, ChiSquared
 from .DistributionEvaluator import DKM, G_Statistic, MARSH, NormalizedGain, KolmogorovDependence
 from .EvaluationFunctionCombiner import EvaluationFunctionCombiner
+from .EvaluationFunctionCombinerRandom import EvaluationFunctionCombinerRandom
 def get_distribution_evaluator(eval_func_name):
         evaluator_dict = {
             'twoing': Twoing,
             'quinlan': QuinlanGain,
             'gini': GiniImpurity,
             'hellinger': Hellinger,
-            'multi-class-hellinger': MultiClassHellinger,
-            'chi-squared': ChiSquared,
+            'multi class hellinger': MultiClassHellinger,
+            'chi squared': ChiSquared,
             'dkm': DKM,
-            'g-statistic': G_Statistic,
+            'g statistic': G_Statistic,
             'marsh': MARSH,
-            'normalized-gain': NormalizedGain,
+            'normalized gain': NormalizedGain,
             'kolmogorov': KolmogorovDependence,
             'bhattacharyya': MultiClassBhattacharyya,
-            'combiner': EvaluationFunctionCombiner
+            'combiner': EvaluationFunctionCombiner,
+            'combiner-random': EvaluationFunctionCombinerRandom
         }
 
         if eval_func_name.lower() in eval_func_name:

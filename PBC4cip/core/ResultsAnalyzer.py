@@ -23,7 +23,7 @@ def order_results(fileDir, column_names, output_directory):
     df = pd.read_csv(fileDir)
     with open(column_names, "r") as f:
         col_names = f.readlines()
-        col_names = [line.replace("\n", "") for line in col_names]
+        col_names = [line.replace("\n", "").strip() for line in col_names]
     
     output_directory = output_directory + "\\order-results"
 
@@ -44,24 +44,23 @@ def order_results(fileDir, column_names, output_directory):
 
     for name in col_names:
         for i,row in df.iterrows():
-            #print(f"name:{name}")
-            #if row['distribution_evaluator'] == 'combiner':
-            #    print(f"dist: {row['eval_functions']}")
-            if str(row['distribution_evaluator']).strip() == name or str(row['eval_functions']).strip() == name:
-                if str(row['distribution_evaluator']).strip() == 'combiner':
-                    results_out.write(f"{str(row['File'])},{str(row['AUC'])},{str(row['ACC'])},{str(row['eval_functions'])}\n")
-                else:
-                    results_out.write(f"{str(row['File'])},{str(row['AUC'])},{str(row['ACC'])},{str(row['distribution_evaluator'])}\n")
+            if str(row['distribution_evaluator']).strip() == 'combiner' or str(row['distribution_evaluator']).strip() == 'combiner-random':
+                if str(row['eval_functions']).strip() == name:
+                    results_out.write(f"{str(row['File'])},{str(row['AUC'])},{str(row['Acc'])},{str(row['eval_functions'])}\n")
+            elif str(row['distribution_evaluator']).strip() == name:
+                results_out.write(f"{str(row['File'])},{str(row['AUC'])},{str(row['Acc'])},{str(row['distribution_evaluator'])}\n")
     results_out.close()
-    transpose_results(file_name, column_names, output_directory)
+    return file_name
+    #transpose_results(file_name, column_names, output_directory)
 
 def transpose_results(fileDir, column_names, output_directory):
     df = pd.read_csv(fileDir)
     with open(column_names, "r") as f:
         col_names = f.readlines()
-        col_names = [line.replace("\n", "") for line in col_names]
+        col_names = [line.replace("\n", "").strip() for line in col_names]
     
     print(f"col_names: {len(col_names)}")
+    print(f"{col_names}")
     file_name = os.path.splitext(os.path.basename(fileDir))[0]
     file_name = os.path.join(output_directory, file_name+'-transpose.csv')
 
@@ -94,6 +93,7 @@ def transpose_results(fileDir, column_names, output_directory):
         results_out.write(str(df.at[i,'File'])+','+",".join(result)+"\n")
     results_out.close()
 
+    return file_name
 
 def wilcoxon(fileDir, output_directory):
     df = pd.read_csv(fileDir)
@@ -323,16 +323,22 @@ def separate(fileDir, output_directory):
     
     auc_name = os.path.splitext(os.path.basename(fileDir))[0]
     auc_name = os.path.join(output_directory, auc_name +'-auc.csv')
+
+    acc_name = os.path.splitext(os.path.basename(fileDir))[0]
+    acc_name = os.path.join(output_directory, acc_name +'-acc.csv')
     
     csv_data = auc_df.to_csv(auc_name, index = False)
+    csv_data = acc_df.to_csv(acc_name, index = False)
+
+    return auc_name, acc_name
 
 def average_k_runs_cross_validation(fileDir, k, output_directory):
+    #k is the amount of data related to a given dataset, so for 10*10 folds, k is 100
     df = pd.read_csv(fileDir)
     chunk_size = len(df['File']) // k
+    print(f"lenFile: { len(df['File'])} chunkSize: {chunk_size}")
     auc_df = df.filter(regex='-AUC')
     acc_df = df.filter(regex='-Acc')
-
-    #print(auc_df.head())
 
     auc_lst = []
     acc_lst = []
@@ -352,7 +358,7 @@ def average_k_runs_cross_validation(fileDir, k, output_directory):
         os.makedirs(output_directory)
 
     auc_name = os.path.splitext(os.path.basename(fileDir))[0]
-    auc_name = os.path.join(output_directory, auc_name +'-avg-k' + str(k) + '.csv')
+    auc_name = os.path.join(output_directory, auc_name +'auc-avg-k' + str(k) + '.csv')
 
     action = "Writing"
     if os.path.exists(auc_name):
@@ -367,7 +373,7 @@ def average_k_runs_cross_validation(fileDir, k, output_directory):
     auc_results_out.close()
 
     acc_name = os.path.splitext(os.path.basename(fileDir))[0]
-    acc_name = os.path.join(output_directory, acc_name +'-acc-avg.csv')
+    acc_name = os.path.join(output_directory, acc_name +'-acc-avg-k' + str(k) + '.csv')
 
     action = "Writing"
     if os.path.exists(acc_name):
@@ -380,6 +386,12 @@ def average_k_runs_cross_validation(fileDir, k, output_directory):
             result = [str(acc_lst[idx][i]) for idx in range(len(acc_lst))]
             acc_results_out.write(str(df.at[i * k,'File'])+','+",".join(result)+"\n")
     acc_results_out.close()
+
+    return auc_name, acc_name
+
+def append_results(fileDir, dir_to_append, outputDirectory):
+    pass
+
 
 def read_shdz_results(fileDir, fileName, outputDirectory):
     auc = None
@@ -488,3 +500,10 @@ def WritePatternsCSV(patterns, originalFile, outputDirectory, suffix=None):
     patterns_out.close()
 
     return name
+
+def pipeline(fileDir, column_names, output_directory, k):
+    order_file = order_results(fileDir, column_names, output_directory)
+    transpose_file = transpose_results(order_file, column_names, output_directory)
+    transpose_auc, transpose_acc = separate(transpose_file, output_directory)
+    auc_avg, acc_avg = average_k_runs_cross_validation(transpose_auc, k, output_directory)
+    #multiple_bayesian_multiple(auc_avg, output_directory)

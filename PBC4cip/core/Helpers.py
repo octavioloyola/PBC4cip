@@ -13,7 +13,7 @@ def SumMatrix(matrix):
 
 def smallest_idx(source):
     if len(source) == 0:
-        raise Exception("source must have atleast 1 element")
+        raise Exception("source must have at least 1 element")
     val = source[0]
     idx = 0
     for i,value in enumerate(source):
@@ -21,6 +21,20 @@ def smallest_idx(source):
             idx = i
             val = value 
     return idx
+
+def random_small_idx(source, random_size):
+    #print(f"random_size: {random_size}")
+    if len(source) == 0:
+        raise Exception("source must have at least 1 element")
+    
+    if len(source) <= random_size:
+        return random.randint(0, len(source)-1)
+
+    lst = np.array(source)
+    idx = np.argpartition(lst, random_size)
+    small_idx = idx[0:random_size]
+    r = random.randint(0, random_size -1)
+    return small_idx[r]
 
 def ArgMin(source):
     if not source:
@@ -68,7 +82,7 @@ def __chain_together(a, b):
 
 #Find Distribution of class values in dataset, i.e how many positive vs negative instances there are
 def FindDistribution(source, model, classFeature):
-    if isinstance(classFeature[1], str):
+    if not isinstance(classFeature[1], list):
         raise Exception("Cannot find distribution for non-nominal class")
 
     result = [0]*len(classFeature[1])
@@ -94,7 +108,12 @@ def convert_to_ndarray(y):
 def get_col_dist(source):
     elems = set()
     for elem in source:
-        elems.add(elem)    
+        if isinstance(elem, float):
+            if not math.isnan(elem):
+                elems.add(elem)
+        else:
+            elems.add(elem)
+
     return sorted(elems)
 
 def get_idx_val(source, instance):

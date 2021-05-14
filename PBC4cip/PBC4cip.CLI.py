@@ -69,7 +69,7 @@ def run_C45(trainFile, outputDirectory, testFile, resultsId, distribution_evalua
         dt_builder.distributionEvaluator = get_distribution_evaluator(distribution_evaluator)
 
     dt_builder.FeatureCount = int(math.log(len(file_dataset.Attributes), 2) + 1)
-    dt_builder.OnSelectingFeaturesToConsider = SampleWithoutRepetition
+    dt_builder.OnSelectingFeaturesToConsider = SampleAllList
     dt = dt_builder.Build()
     dt_classifier = DecisionTreeClassifier(dt)
     y_scores = []

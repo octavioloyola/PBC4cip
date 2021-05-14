@@ -13,7 +13,7 @@ from core.DecisionTreeBuilder import DecisionTreeBuilder, MultivariateDecisionTr
 from core.PatternMiner import PatternMinerWithoutFiltering
 from core.PatternFilter import MaximalPatternsGlobalFilter
 from core.DistributionEvaluatorHelper import get_distribution_evaluator
-from core.RandomSampler import SampleWithoutRepetition
+from core.RandomSampler import SampleWithoutRepetition, SampleAllList
 from core.Evaluation import obtainAUCMulticlass
 from core.SupervisedClassifier import DecisionTreeClassifier
 
@@ -22,6 +22,7 @@ from core.Dataset import Dataset, FileDataset, PandasDataset
 from core.ResultsAnalyzer import show_results, wilcoxon, order_results, separate
 from core.ResultsAnalyzer import one_bayesian_one, multiple_bayesian_multiple
 from core.ResultsAnalyzer import one_bayesian_multiple, average_k_runs_cross_validation
+from core.ResultsAnalyzer import append_results
 from core.ResultsAnalyzer import read_shdz_results, read_confusion_matrix, pipeline
 
 from datetime import datetime
@@ -113,7 +114,7 @@ def run_C45_combinations(trainFile, outputDirectory, testFile, resultsId, distri
     dt_builder.distributionEvaluator = get_distribution_evaluator(distribution_evaluator)
 
     dt_builder.FeatureCount = int(math.log(len(file_dataset.Attributes), 2) + 1)
-    dt_builder.OnSelectingFeaturesToConsider = SampleWithoutRepetition
+    dt_builder.OnSelectingFeaturesToConsider = SampleAllList
 
     non_filtered_func_combinations = list(itertools.combinations(eval_functions, combination_size))
     #print(f"lne: {len(non_filtered_func_combinations)}")
@@ -130,12 +131,12 @@ def run_C45_combinations(trainFile, outputDirectory, testFile, resultsId, distri
                     func_combinations.append(list(func_combinations_elem))
     
         func_combinations = list(x for x,_ in itertools.groupby(func_combinations))
-        print(f"filter: {func_combinations} len: {len(func_combinations)}")
+        #print(f"filter: {func_combinations} len: {len(func_combinations)}")
     else:
         func_combinations = non_filtered_func_combinations
     
     #func_combinations =  list(set(func_combinations))
-    print(f"filter: {func_combinations}")
+    #print(f"filter: {func_combinations}")
     for combination in func_combinations:
         dt_builder.distributionEvaluator = dt_builder.distributionEvaluator(list(combination))
         dt = dt_builder.Build()
@@ -342,7 +343,7 @@ def Execute(args):
         elif args.analysis == 'separate':
             separate(training_files[f], args.output_directory)
         elif args.analysis == 'pipeline':
-            pipeline(training_files[f], args.column_names, args.output_directory ,args.cross_validation_k)
+            pipeline(training_files[f], args.original_dir, args.column_names, args.output_directory ,args.cross_validation_k)
         else:
             raise Exception(f'Analysis mode {args.analysis} not supported')
         
@@ -482,8 +483,11 @@ if __name__ == '__main__':
                         metavar='runs',
                         default=None,
                         help="Sets amount of runs for bayesian analysis")
-
-    
+    parser.add_argument("--original-dir",
+                        type=str,
+                        metavar='og-dir',
+                        default=None,
+                        help="Sets directory of the original files to be combined")
 
     
 

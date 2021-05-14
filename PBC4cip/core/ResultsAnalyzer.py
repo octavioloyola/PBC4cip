@@ -390,7 +390,30 @@ def average_k_runs_cross_validation(fileDir, k, output_directory):
     return auc_name, acc_name
 
 def append_results(fileDir, dir_to_append, outputDirectory):
-    pass
+    df_comb = pd.read_csv(fileDir)
+    df_original = pd.read_csv(dir_to_append)
+    df_comb = df_comb.drop(['File'], axis=1)
+
+    for col_name in df_comb.columns:
+        df_original[f'{col_name}'] = df_comb[f'{col_name}']
+
+    outputDirectory = outputDirectory + "\\combined-results"
+
+    if not os.path.exists(outputDirectory):
+        print(f"Creating combined results directory: {outputDirectory}")
+        os.makedirs(outputDirectory)
+
+    auc_name = os.path.splitext(os.path.basename(fileDir))[0]
+    auc_name = os.path.join(outputDirectory, auc_name +'comb.csv')
+
+    action = "Writing"
+    if os.path.exists(auc_name):
+        action = "Overwriting"
+        os.remove(auc_name)
+    
+    csv_data = df_original.to_csv(auc_name, index = False)
+    print(f"append_results: {auc_name}")
+    return auc_name
 
 
 def read_shdz_results(fileDir, fileName, outputDirectory):
@@ -501,9 +524,10 @@ def WritePatternsCSV(patterns, originalFile, outputDirectory, suffix=None):
 
     return name
 
-def pipeline(fileDir, column_names, output_directory, k):
+def pipeline(fileDir, originalDir, column_names, output_directory, k):
     order_file = order_results(fileDir, column_names, output_directory)
     transpose_file = transpose_results(order_file, column_names, output_directory)
     transpose_auc, transpose_acc = separate(transpose_file, output_directory)
     auc_avg, acc_avg = average_k_runs_cross_validation(transpose_auc, k, output_directory)
-    #multiple_bayesian_multiple(auc_avg, output_directory)
+    auc_avg_comb = append_results(auc_avg, originalDir, output_directory)
+    multiple_bayesian_multiple(auc_avg_comb, output_directory)

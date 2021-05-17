@@ -6,8 +6,8 @@ from .EvaluationFunctionCombinerRandom import EvaluationFunctionCombinerRandom
 def get_distribution_evaluator(eval_func_name):
         evaluator_dict = {
             'twoing': Twoing,
-            'quinlan': QuinlanGain,
-            'gini': GiniImpurity,
+            'quinlan gain': QuinlanGain,
+            'gini impurity': GiniImpurity,
             'hellinger': Hellinger,
             'multi class hellinger': MultiClassHellinger,
             'chi squared': ChiSquared,
@@ -21,8 +21,8 @@ def get_distribution_evaluator(eval_func_name):
             'combiner-random': EvaluationFunctionCombinerRandom
         }
 
-        if eval_func_name.lower() in eval_func_name:
+        if eval_func_name.lower() in evaluator_dict:
             return evaluator_dict[eval_func_name.lower()]
         else:
-            raise Exception(f"{eval_func_name} is not a supported evaluation function")
+            raise Exception(f"{eval_func_name.lower()} is not a supported evaluation function")
     

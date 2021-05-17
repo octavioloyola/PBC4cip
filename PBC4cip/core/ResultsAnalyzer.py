@@ -19,6 +19,34 @@ def show_results(confusion, acc, auc, numPatterns):
         print("")
     print(f"acc: {acc} , auc: {auc} , numPatterns: {numPatterns}")
 
+def join_prelim_results(fileDir, outputDirectory):
+    print(f"ssss")
+    df = pd.read_csv(fileDir)
+
+    if not os.path.exists(outputDirectory):
+        print(f"Creating output directory: {outputDirectory}")
+        os.makedirs(outputDirectory)
+
+    print(f"FileName: {os.path.splitext(os.path.basename(fileDir))}")
+
+    FileName = os.path.splitext(os.path.basename(fileDir))[0].split('-')[0]
+    name = os.path.join(outputDirectory, f"-{FileName}.csv")
+
+    action = "Writing"
+    if os.path.exists(name):
+        action = "Appending"
+        results_out = open(name, "a+", newline='\n', encoding='utf-8')
+    else:
+        results_out = open(name, "w+", newline='\n', encoding='utf-8')
+        results_out.write(f"File,AUC,Acc,NumPatterns,Filtering,distribution_evaluator,eval_functions\n")
+    
+    for i,row in df.iterrows():
+        results_out.write(f"{str(row['File'])},{str(row['AUC'])},{str(row['Acc'])},{str(row['NumPatterns'])},{str(row['Filtering'])},{str(row['distribution_evaluator'])},{str(row['eval_functions'])}\n")
+    results_out.close()
+
+    return name
+
+
 def order_results(fileDir, column_names, output_directory):
     df = pd.read_csv(fileDir)
     with open(column_names, "r") as f:

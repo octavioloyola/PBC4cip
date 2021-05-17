@@ -22,7 +22,7 @@ from core.Dataset import Dataset, FileDataset, PandasDataset
 from core.ResultsAnalyzer import show_results, wilcoxon, order_results, separate
 from core.ResultsAnalyzer import one_bayesian_one, multiple_bayesian_multiple
 from core.ResultsAnalyzer import one_bayesian_multiple, average_k_runs_cross_validation
-from core.ResultsAnalyzer import append_results
+from core.ResultsAnalyzer import append_results, join_prelim_results
 from core.ResultsAnalyzer import read_shdz_results, read_confusion_matrix, pipeline
 
 from datetime import datetime
@@ -342,6 +342,8 @@ def Execute(args):
             read_confusion_matrix(training_files[f], args.filename, args.output_directory)
         elif args.analysis == 'separate':
             separate(training_files[f], args.output_directory)
+        elif args.analysis == 'join-prelim':
+            join_prelim_results(training_files[f], args.output_directory)
         elif args.analysis == 'pipeline':
             pipeline(training_files[f], args.original_dir, args.column_names, args.output_directory ,args.cross_validation_k)
         else:

@@ -20,8 +20,9 @@ def show_results(confusion, acc, auc, numPatterns):
     print(f"acc: {acc} , auc: {auc} , numPatterns: {numPatterns}")
 
 def join_prelim_results(fileDir, outputDirectory):
-    print(f"ssss")
     df = pd.read_csv(fileDir)
+
+    outputDirectory = outputDirectory + "\\joined-results"
 
     if not os.path.exists(outputDirectory):
         print(f"Creating output directory: {outputDirectory}")
@@ -36,12 +37,18 @@ def join_prelim_results(fileDir, outputDirectory):
     if os.path.exists(name):
         action = "Appending"
         results_out = open(name, "a+", newline='\n', encoding='utf-8')
-    else:
+    elif 'eval_functions' in df.columns:
         results_out = open(name, "w+", newline='\n', encoding='utf-8')
         results_out.write(f"File,AUC,Acc,NumPatterns,Filtering,distribution_evaluator,eval_functions\n")
+    else:
+        results_out = open(name, "w+", newline='\n', encoding='utf-8')
+        results_out.write(f"File,AUC,Acc,NumPatterns,Filtering,distribution_evaluator\n")
     
     for i,row in df.iterrows():
-        results_out.write(f"{str(row['File'])},{str(row['AUC'])},{str(row['Acc'])},{str(row['NumPatterns'])},{str(row['Filtering'])},{str(row['distribution_evaluator'])},{str(row['eval_functions'])}\n")
+        if 'eval_functions' in df.columns:
+            results_out.write(f"{str(row['File'])},{str(row['AUC'])},{str(row['Acc'])},{str(row['NumPatterns'])},{str(row['Filtering'])},{str(row['distribution_evaluator'])},{str(row['eval_functions'])}\n")
+        else:
+            results_out.write(f"{str(row['File'])},{str(row['AUC'])},{str(row['Acc'])},{str(row['NumPatterns'])},{str(row['Filtering'])},{str(row['distribution_evaluator'])}\n")
     results_out.close()
 
     return name

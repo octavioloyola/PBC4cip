@@ -427,6 +427,11 @@ def average_k_runs_cross_validation(fileDir, k, output_directory):
 def append_results(fileDir, dir_to_append, outputDirectory):
     df_comb = pd.read_csv(fileDir)
     df_original = pd.read_csv(dir_to_append)
+
+    df_comb = df_comb.sort_values('File')
+    df_original = df_original.sort_values('File')
+    print(f"df_comb: {df_comb.head(10)}")
+    print(f"\ndf_og: {df_original.head(10)}")
     df_comb = df_comb.drop(['File'], axis=1)
 
     for col_name in df_comb.columns:
@@ -560,9 +565,18 @@ def WritePatternsCSV(patterns, originalFile, outputDirectory, suffix=None):
     return name
 
 def pipeline(fileDir, originalDir, column_names, output_directory, k):
+    #joined_file = join_prelim_results(fileDir, output_directory)
     order_file = order_results(fileDir, column_names, output_directory)
     transpose_file = transpose_results(order_file, column_names, output_directory)
     transpose_auc, transpose_acc = separate(transpose_file, output_directory)
     auc_avg, acc_avg = average_k_runs_cross_validation(transpose_auc, k, output_directory)
     auc_avg_comb = append_results(auc_avg, originalDir, output_directory)
     multiple_bayesian_multiple(auc_avg_comb, output_directory)
+
+def pipeline_wilcoxon(fileDir, originalDir, column_names, output_directory):
+    order_file = order_results(fileDir, column_names, output_directory)
+    transpose_file = transpose_results(order_file, column_names, output_directory)
+    transpose_auc, transpose_acc = separate(transpose_file, output_directory)
+    #auc_avg, acc_avg = average_k_runs_cross_validation(transpose_auc, k, output_directory)
+    transpose_auc_comb = append_results(transpose_auc, originalDir, output_directory)
+    wilcoxon(transpose_auc_comb, output_directory)

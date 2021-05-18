@@ -135,7 +135,7 @@ def run_C45_combinations(trainFile, outputDirectory, testFile, resultsId, distri
     else:
         func_combinations = non_filtered_func_combinations
     
-    #func_combinations =  list(set(func_combinations))
+    print(f"lenFuncComb: {len(func_combinations)}")
     #print(f"filter: {func_combinations}")
     for combination in func_combinations:
         dt_builder.distributionEvaluator = dt_builder.distributionEvaluator(list(combination))

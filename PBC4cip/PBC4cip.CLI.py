@@ -4,6 +4,7 @@ import math
 import itertools
 import numpy as np
 import pandas as pd
+from sklearn.model_selection import KFold, StratifiedKFold
 
 from tqdm import tqdm, trange
 from core.PBC4cip import PBC4cip
@@ -22,8 +23,12 @@ from core.Dataset import Dataset, FileDataset, PandasDataset
 from core.ResultsAnalyzer import show_results, wilcoxon, order_results, separate
 from core.ResultsAnalyzer import one_bayesian_one, multiple_bayesian_multiple
 from core.ResultsAnalyzer import one_bayesian_multiple, average_k_runs_cross_validation
-from core.ResultsAnalyzer import append_results, join_prelim_results
+from core.ResultsAnalyzer import append_results, join_prelim_results,analyze_bayes
 from core.ResultsAnalyzer import read_shdz_results, read_confusion_matrix, pipeline
+from core.ResultsAnalyzer import pipeline_wilcoxon, analyze_wilcoxon, set_for_cd_diagram
+from core.ResultsAnalyzer import pipeline_cd, convert_names, combine_probs_auc
+from core.ResultsAnalyzer import pipeline_wilcoxon_cd, pipeline_leo,leo_bayesian,sort_results
+from core.ResultsAnalyzer import leo_bayesian_figure
 
 from datetime import datetime
 
@@ -73,13 +78,13 @@ def run_C45(trainFile, outputDirectory, testFile, resultsId, distribution_evalua
     dt = dt_builder.Build()
     dt_classifier = DecisionTreeClassifier(dt)
     y_scores = []
+
     for instance in X_test:
         inst_classify = dt_classifier.Classify(instance)
         #print(f"x_classify: {inst_classify}" )
         y_scores.append(inst_classify)
     
     y_pred = [ArgMax(instance) for instance in y_scores]
-    #print(f"y_pred: {y_pred}")
     confusion, acc, auc = score_txtfile(y_pred, y_test, file_dataset)
 
     WriteResultsCSV(confusion, acc, auc, 0, testFile, outputDirectory, resultsId, "Not applicable", distribution_evaluator,
@@ -94,8 +99,65 @@ def run_C45_multiple(trainFile, outputDirectory, testFile, resultsId, evaluation
     for func in eval_functions:
         run_C45(trainFile, outputDirectory, testFile, resultsId, func, evaluationFunctionDir)
 
+def run_C45_find_best(trainFile, outputDirectory, testFile, resultsId, eval_function_list):
+    with open(eval_function_list, "r") as f:
+        eval_functions = f.readlines()
+        eval_functions = [line.replace("\n", "").strip() for line in eval_functions]
+
+    train = convert_dat_to_csv(trainFile)
+    test = convert_dat_to_csv(testFile)
+
+    train_df, test_df = import_data(train, test)
+    os.remove(train)
+    os.remove(test)
+    X_train, y_train, X_test, y_test = split_data(train_df, test_df, "Class")
+
+    max_auc = 0
+    best_fs = None
+    kf = StratifiedKFold(n_splits = 5)
+
+    for eval_function in eval_functions:
+        val_auc = 0
+        for train_index, test_index in kf.split(X_train, y_train):
+            X_train_fold, X_test_fold = X_train.iloc[train_index], X_train.iloc[test_index]
+            y_train_fold, y_test_fold = y_train.iloc[train_index], y_train.iloc[test_index]
+
+            pandas_dataset = PandasDataset(X_train, y_train)
+
+            X = X_train_fold.to_numpy()
+            y = y_train_fold.to_numpy()
+            dt_builder = DecisionTreeBuilder(pandas_dataset, X, y)
+            dt_builder.distributionEvaluator = get_distribution_evaluator(eval_function)
+
+            dt_builder.OnSelectingFeaturesToConsider = SampleAllList
+            dt = dt_builder.Build()
+            dt_classifier = DecisionTreeClassifier(dt)
+            
+            X_test_fold_np = X_test_fold.to_numpy()
+            y_test_fold_np = y_test_fold.to_numpy()
+            y_scores = []
+            for instance in X_test_fold_np:
+                inst_classify = dt_classifier.Classify(instance)
+                y_scores.append(inst_classify)
+
+           #print(f"y_scores: {y_scores}")
+            y_pred = [ArgMax(instance) for instance in y_scores]
+            #print(f"y_pred: {y_pred}")
+            #print(f"Class: {pandas_dataset.Class}")
+            confusion, acc, current_auc = score(y_pred, y_test_fold, pandas_dataset.Class[1])
+            val_auc += (current_auc / 5)
+            
+        print(f"eval_func: {eval_function} auc: {val_auc}")
+        if val_auc > max_auc:
+            max_auc = val_auc
+            best_fs = eval_function
+
+    print(f"enter runC45: {trainFile} & {best_fs}")
+    run_C45(trainFile, outputDirectory, testFile, resultsId, best_fs)
+
+
 def run_C45_combinations(trainFile, outputDirectory, testFile, resultsId, distribution_evaluator, evaluationFunctionDir,
- combination_size, required_funcs = None):
+ combination_size, required_funcs = None, comb_to_avoid = None):
     if not (distribution_evaluator == 'combiner' or distribution_evaluator == 'combiner-random'):
         raise Exception(f"Evaluation measure {distribution_evaluator} not supported for run_C45_combinations")
     with open(evaluationFunctionDir, "r") as f:
@@ -106,7 +168,13 @@ def run_C45_combinations(trainFile, outputDirectory, testFile, resultsId, distri
         with open(required_funcs, "r") as f:
             required_lst = f.readlines()
             required_lst = [line.replace("\n", "").strip() for line in required_lst]
-        
+
+    avoid_funcs = []
+    if comb_to_avoid is not None:
+        with open(comb_to_avoid, "r") as f:
+            avoid_funcs = f.readlines()
+            avoid_funcs = [line.replace("\n", "").strip() for line in avoid_funcs]
+                
     X_train, y_train = returnX_y(trainFile)
     X_test, y_test = returnX_y(testFile)
     file_dataset = FileDataset(trainFile)
@@ -117,16 +185,11 @@ def run_C45_combinations(trainFile, outputDirectory, testFile, resultsId, distri
     dt_builder.OnSelectingFeaturesToConsider = SampleAllList
 
     non_filtered_func_combinations = list(itertools.combinations(eval_functions, combination_size))
-    #print(f"lne: {len(non_filtered_func_combinations)}")
-    #print(f"nonFilter: {non_filtered_func_combinations} type: {type(non_filtered_func_combinations)}")
     func_combinations = []
     if required_funcs is not None:
         for i in range(len(non_filtered_func_combinations)):
             func_combinations_elem = list(non_filtered_func_combinations[i])
             for comb in required_lst:
-                #if ((set(comb.split('-'))) == set(['Twoing', 'Chi Squared'])):
-                #if set(comb.split('-') == set(['Chi Squared', 'Twoing', 'Quinlan Gain'])):
-                    #print(f"elem: {set(comb.split('-'))} subset: {func_combinations_elem} issubset: {set(comb.split('-')).issubset(func_combinations_elem)}")
                 if set(comb.split('-')).issubset(func_combinations_elem):
                     func_combinations.append(list(func_combinations_elem))
     
@@ -136,25 +199,25 @@ def run_C45_combinations(trainFile, outputDirectory, testFile, resultsId, distri
         func_combinations = non_filtered_func_combinations
     
     print(f"lenFuncComb: {len(func_combinations)}")
-    #print(f"filter: {func_combinations}")
+    #print(f"filters: {func_combinations}")
     for combination in func_combinations:
-        dt_builder.distributionEvaluator = dt_builder.distributionEvaluator(list(combination))
-        dt = dt_builder.Build()
-        dt_classifier = DecisionTreeClassifier(dt)
-        y_scores = []
-        for instance in X_test:
-            inst_classify = dt_classifier.Classify(instance)
-            #print(f"x_classify: {inst_classify}" )
-            y_scores.append(inst_classify)
+        comb_name = "-".join(combination)
+        if comb_name not in avoid_funcs:
+            dt_builder.distributionEvaluator = dt_builder.distributionEvaluator(list(combination))
+            dt = dt_builder.Build()
+            dt_classifier = DecisionTreeClassifier(dt)
+            y_scores = []
+            for instance in X_test:
+                inst_classify = dt_classifier.Classify(instance)
+                y_scores.append(inst_classify)
     
-        y_pred = [ArgMax(instance) for instance in y_scores]
-        #print(f"y_pred: {y_pred}")
-        confusion, acc, auc = score_txtfile(y_pred, y_test, file_dataset)
+            y_pred = [ArgMax(instance) for instance in y_scores]
+            confusion, acc, auc = score_txtfile(y_pred, y_test, file_dataset)
 
-        WriteResultsCSV(confusion, acc, auc, 0, testFile, outputDirectory, resultsId, "Not applicable", distribution_evaluator,
-        functions_to_combine=list(combination))
-        show_results(confusion, acc, auc, 0)
-        dt_builder.distributionEvaluator = get_distribution_evaluator(distribution_evaluator)
+            WriteResultsCSV(confusion, acc, auc, 0, testFile, outputDirectory, resultsId, "Not applicable", distribution_evaluator,
+            functions_to_combine=list(combination))
+            show_results(confusion, acc, auc, 0)
+            dt_builder.distributionEvaluator = get_distribution_evaluator(distribution_evaluator)
     
 def split_data(train, test, class_name = 'class'):
     if train.shape[1] != train.shape[1]:
@@ -169,8 +232,6 @@ def split_data(train, test, class_name = 'class'):
     X_test = test.iloc[:,  attr_idxs]
     y_test =  test.iloc[:, [class_idx]]
 
-    #print(str(type(X_train)) + "," + str(type(X_test)) + "," + str(type(y_train)) + "," + str(type(y_test)))
-
     y_train_str = [str(x) for x in y_train[f'{class_name}']]
     y_test_str = [str(x) for x in y_test[f'{class_name}']]
     y_train[f'{class_name}'] = y_train_str
@@ -178,22 +239,27 @@ def split_data(train, test, class_name = 'class'):
 
     return X_train, y_train, X_test, y_test
 
-def score(predicted, y):
-        y_class_dist = get_col_dist(y[f'{y.columns[0]}'])
-        #predicted_class_dist = get_col
+def score(predicted, y, class_dist = None):
+        if class_dist is None:
+            #print(f"score?")
+            #print(f"y: {y}")
+            y_class_dist = get_col_dist(y[f'{y.columns[0]}'])
+            #print(f"class_dist: {y_class_dist}")
+        else:
+            y_class_dist = class_dist
+
         real = list(map(lambda instance: get_idx_val(y_class_dist, instance), y[f'{y.columns[0]}']))
         numClasses = len(y_class_dist)
-        print(f"numClasses: {numClasses}")
-        confusion = [[0]*2 for i in range(numClasses)]
+        
+        
+        confusion = [[0]*numClasses for i in range(numClasses)]
         classified_as = 0
         error_count = 0
-
-        print(f"predicted: {predicted} len: {len(predicted)}")
-        print(f"real: {real} len:{len(real)}")
 
         for i in range(len(real)):
             if real[i] != predicted[i]:
                 error_count = error_count + 1
+            
             confusion[real[i]][predicted[i]] = confusion[real[i]][predicted[i]] + 1
 
         acc = 100.0 * (len(real) - error_count) / len(real)
@@ -203,6 +269,7 @@ def score(predicted, y):
 
 def score_txtfile(predicted, y, dataset):
     real = list(map(lambda instance: dataset.GetClassValue(instance), y))
+    print(f"predicted:{predicted}\ny:{y}\nreal:{real}")
     numClasses = len(dataset.Class[1])
     confusion = [[0]*numClasses for i in range(numClasses)]
     classified_as = 0
@@ -230,6 +297,7 @@ def Train_and_test(X_train, y_train, X_test, y_test, treeCount, multivariate, fi
 
 def test_PBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering, testFile, resultsId, delete, 
 distribution_evaluator, class_column): 
+    print(f"aaaaaaaaaaaaa")
     #Uncomment this to work with text files instead of dataframes  
     """
     X_train, y_train = returnX_y(trainFile)
@@ -248,6 +316,7 @@ distribution_evaluator, class_column):
     """
     train_df, test_df = import_data(trainFile, testFile)
     X_train, y_train, X_test, y_test = split_data(train_df, test_df, class_column)
+    print(f"X_train: {type(X_train)}")
     classifier = PBC4cip(tree_count=treeCount, multivariate=multivariate, filtering=filtering, distribution_evaluator=distribution_evaluator)
     patterns = classifier.fit(X_train, y_train)
     #print(f"lenPatterns: {len(patterns)}")
@@ -320,7 +389,7 @@ def Execute(args):
             , args.evaluation_functions)
         elif args.analysis == 'runC45Combinations':
             run_C45_combinations(training_files[f], args.output_directory,  testing_files[f], resultsId, args.distribution_evaluation
-            , args.evaluation_functions, args.combination_size, args.required_funcs)
+            , args.evaluation_functions, args.combination_size, args.required_funcs, args.avoid_funcs)
         elif args.analysis == 'runC45Multiple':
             run_C45_multiple(training_files[f], args.output_directory,  testing_files[f], resultsId
             , args.evaluation_functions, args.evaluation_functions_list)
@@ -342,10 +411,38 @@ def Execute(args):
             read_confusion_matrix(training_files[f], args.filename, args.output_directory)
         elif args.analysis == 'separate':
             separate(training_files[f], args.output_directory)
+        elif args.analysis == 'sort':
+            sort_results(training_files[f], args.output_directory)
         elif args.analysis == 'join-prelim':
             join_prelim_results(training_files[f], args.output_directory)
+        elif args.analysis == 'comb-prob-auc':
+            combine_probs_auc(training_files[f], args.original_dir, args.output_directory)
+        elif args.analysis == 'convert-names':
+            convert_names(training_files[f], args.convert_type, args.output_directory)
+        elif args.analysis == 'analyze-bayes':
+            analyze_bayes(training_files[f], args.output_directory)
+        elif args.analysis == 'analyze-wilcoxon':
+            analyze_wilcoxon(training_files[f], args.output_directory)
         elif args.analysis == 'pipeline':
-            pipeline(training_files[f], args.original_dir, args.column_names, args.output_directory ,args.cross_validation_k)
+            pipeline(training_files[f], args.original_dir, args.output_directory ,args.cross_validation_k)
+        elif args.analysis == 'pipeline-wilcoxon':
+            pipeline_wilcoxon(training_files[f], args.original_dir, args.output_directory, args.cross_validation_k)
+        elif args.analysis == 'cd-diagram':
+            set_for_cd_diagram(training_files[f], args.output_directory)
+        elif args.analysis == 'pipeline-cd':
+            pipeline_cd(training_files[f], args.original_dir, args.output_directory, args.cross_validation_k)
+        elif args.analysis == 'pipeline-wilcoxon-cd':
+            pipeline_wilcoxon_cd(training_files[f], args.output_directory)
+        elif args.analysis == 'pipeline-leo':
+            pipeline_leo(training_files[f], args.original_dir, args.output_directory, args.cross_validation_k)
+        elif args.analysis == 'leo-bayesian':
+            leo_bayesian(training_files[f], args.output_directory)
+        elif args.analysis == 'leo-bayesian-figure':
+            leo_bayesian_figure(training_files[f], args.output_directory)
+        elif args.analysis == 'best-fs':
+            run_C45_find_best(training_files[f], args.output_directory, testing_files[f], resultsId, 
+            args.evaluation_functions_list)
+
         else:
             raise Exception(f'Analysis mode {args.analysis} not supported')
         
@@ -483,13 +580,24 @@ if __name__ == '__main__':
     parser.add_argument("--runs",
                         type=int,
                         metavar='runs',
-                        default=None,
+                        default=1,
                         help="Sets amount of runs for bayesian analysis")
+    parser.add_argument("--avoid-funcs",
+                        type=str,
+                        metavar='avoid',
+                        default=None,
+                        help="Gives a list of evaluation functions that should be ignored")                    
     parser.add_argument("--original-dir",
                         type=str,
                         metavar='og-dir',
                         default=None,
                         help="Sets directory of the original files to be combined")
+    parser.add_argument("--convert-type",
+                        type=int,
+                        metavar='conv',
+                        default=1,
+                        help="Sets type of conversion for shortening classifier names")
+                        
 
     
 

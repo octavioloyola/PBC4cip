@@ -22,6 +22,7 @@ class DecisionTreeClassifier(object):
         self.__Model = new_model
 
     def ClassifyInstance(self, node, instance, instanceMembership):
+        #print(f"nodeData: {node.Data}")
         if node.IsLeaf:
             return MultiplyBy(node.Data, instanceMembership)
 
@@ -57,6 +58,7 @@ class DecisionTreeClassifier(object):
         return result
 
     def Classify(self, instance):
+        #print(f"instance Classify: {instance}")
         classification = self.ClassifyInstance(
             self.DecisionTree.TreeRootNode, instance, 1)
         return MultiplyBy(classification, (1/sum(classification)))

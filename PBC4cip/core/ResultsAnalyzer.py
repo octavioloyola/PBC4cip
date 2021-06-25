@@ -2,6 +2,7 @@ import csv
 import math
 import os
 import random
+import statistics
 
 import baycomp
 import numpy as np
@@ -54,12 +55,9 @@ def join_prelim_results(fileDir, outputDirectory):
     return name
 
 
-def order_results(fileDir, column_names, output_directory):
+def order_results(fileDir, output_directory):
+    #TODO Fix for non combination
     df = pd.read_csv(fileDir)
-    with open(column_names, "r") as f:
-        col_names = f.readlines()
-        col_names = [line.replace("\n", "").strip() for line in col_names]
-    
     output_directory = output_directory + "\\order-results"
 
     if not os.path.exists(output_directory):
@@ -74,19 +72,24 @@ def order_results(fileDir, column_names, output_directory):
         action = "Overwriting"
         os.remove(file_name)
     
-    results_out = open(file_name, "a", newline='\n', encoding='utf-8')
-    results_out.write(f"File,AUC,Acc,distribution-evaluator\n")
+    if str(df.at[0, 'distribution_evaluator']).strip() == 'combiner' or str(df.at[0, 'distribution_evaluator']).strip() == 'combiner-random':
+        column_names = df.eval_functions.unique()
+    else:
+        column_names = df.distribution_evaluator.unique()
+    
+    file_names = df.File.unique()
+    print(f"len file: {len(file_names)}")
+    df_output = pd.DataFrame()
+    df_output['File'] = file_names
+    for name in column_names:
+        temp_auc = list(df[df['eval_functions'] == name]['AUC'])
+        df_output[f'{name}-AUC'] = temp_auc
+        temp_acc =list(df[df['eval_functions'] == name]['Acc'])
+        df_output[f'{name}-Acc'] = temp_acc
 
-    for name in col_names:
-        for i,row in df.iterrows():
-            if str(row['distribution_evaluator']).strip() == 'combiner' or str(row['distribution_evaluator']).strip() == 'combiner-random':
-                if str(row['eval_functions']).strip() == name:
-                    results_out.write(f"{str(row['File'])},{str(row['AUC'])},{str(row['Acc'])},{str(row['eval_functions'])}\n")
-            elif str(row['distribution_evaluator']).strip() == name:
-                results_out.write(f"{str(row['File'])},{str(row['AUC'])},{str(row['Acc'])},{str(row['distribution_evaluator'])}\n")
-    results_out.close()
+    csv_data = df_output.to_csv(file_name, index = False)
+
     return file_name
-    #transpose_results(file_name, column_names, output_directory)
 
 def transpose_results(fileDir, column_names, output_directory):
     df = pd.read_csv(fileDir)
@@ -132,48 +135,7 @@ def transpose_results(fileDir, column_names, output_directory):
 
 def wilcoxon(fileDir, output_directory):
     df = pd.read_csv(fileDir)
-    auc_df = df.filter(regex='-AUC')
-    acc_df = df.filter(regex='-Acc')
-
-    auc_lst = []
-    auc_w_one = []
-    auc_w_two = []
-    for col_x in auc_df.columns:
-        for col_y in auc_df.columns:
-            if col_x != col_y:
-                #print(f"{col_x} and {col_y}")
-                x,y = map(np.asarray, (auc_df[f'{col_x}'],auc_df[f'{col_y}']))
-                d = x-y
-                d = np.compress(np.not_equal(d, 0), d)
-
-                r = stats.rankdata(abs(d))
-                r_plus = np.sum((d > 0)* r)
-                r_minus = np.sum((d < 0) * r)
-                auc_w_one.append(r_plus)
-                auc_w_two.append(r_minus)
-
-                w,p = stats.wilcoxon(x,y)
-                auc_lst.append(p)
-
-    acc_lst = []
-    acc_w_one = []
-    acc_w_two = []
-    for col_x in acc_df.columns:
-        for col_y in acc_df.columns:
-            if col_x != col_y:
-                #print(f"{col_x} and {col_y}")
-                x,y = map(np.asarray, (acc_df[f'{col_x}'],acc_df[f'{col_y}']))
-                d = x-y
-                d = np.compress(np.not_equal(d, 0), d)
-
-                r = stats.rankdata(abs(d))
-                r_plus = np.sum((d > 0)* r)
-                r_minus = np.sum((d < 0) * r)
-                acc_w_one.append(r_plus)
-                acc_w_two.append(r_minus)
-
-                w,p = stats.wilcoxon(x,y)
-                acc_lst.append(p)
+    num_df = df.drop(columns=['File'])
     
     output_directory = output_directory + "\\stat-tests"
 
@@ -182,7 +144,7 @@ def wilcoxon(fileDir, output_directory):
         os.makedirs(output_directory)
         
     auc_name = os.path.splitext(os.path.basename(fileDir))[0]
-    auc_name = os.path.join(output_directory, auc_name +'-auc.csv')
+    auc_name = os.path.join(output_directory, auc_name +'-wilcoxon.csv')
 
     action = "Writing"
     if os.path.exists(auc_name):
@@ -191,36 +153,65 @@ def wilcoxon(fileDir, output_directory):
     
     auc_results_out = open(auc_name, "a", newline='\n', encoding='utf-8')
     auc_results_out.write(f"Combination,P-Value,W-Pos,W-Neg\n")
-    idx = 0
-    for i, col_x in enumerate(auc_df.columns):
-        for j, col_y in enumerate(auc_df.columns):
+
+    for col_x in num_df.columns:
+        for col_y in num_df.columns:
             if col_x != col_y:
                 combination = col_x[0:len(col_x)-4] + " vs " +  col_y[0:len(col_y)-4]
-                auc_results_out.write(f"{combination},{str(auc_lst[idx])},{str(auc_w_one[idx])},{str(auc_w_two[idx])}\n")
-                idx = idx+1
+                x,y = map(np.asarray, (num_df[f'{col_x}'],num_df[f'{col_y}']))
+                d = x-y
+                d = np.compress(np.not_equal(d, 0), d)
+                if len(d) == 0:
+                    auc_results_out.write(f"{combination},{str(1)},{str(0)},{str(0)}\n")
+                    continue
+
+                r = stats.rankdata(abs(d))
+                r_plus = np.sum((d > 0)* r)
+                r_minus = np.sum((d < 0) * r)
+
+                w,p = stats.wilcoxon(x,y)
+                auc_results_out.write(f"{combination},{str(p)},{str(r_plus)},{str(r_minus)}\n")
         auc_results_out.write(f"\n")
-    auc_results_out.close()
-    
-    acc_name = os.path.splitext(os.path.basename(fileDir))[0]
-    acc_name = os.path.join(output_directory, acc_name+'-acc.csv')
 
-    action = "Writing"
-    if os.path.exists(acc_name):
-        action = "Overwriting"
-        os.remove(acc_name)
-    
-    acc_results_out = open(acc_name, "a", newline='\n', encoding='utf-8')
-    acc_results_out.write(f"Combination,P-Value,W-Pos,W-Neg\n")
-    idx = 0
-    for i, col_x in enumerate(acc_df.columns):
-        for j, col_y in enumerate(acc_df.columns):
-            if col_x != col_y:
-                combination = col_x[0:len(col_x)-4] + " vs " +  col_y[0:len(col_y)-4]
-                acc_results_out.write(f"{combination},{str(acc_lst[idx])},{str(acc_w_one[idx])},{str(acc_w_two[idx])}\n")
-                idx = idx+1
-        acc_results_out.write(f"\n")
+    return auc_name
 
-    acc_results_out.close()
+def analyze_wilcoxon(fileDir, outputDirectory):
+    print(f"Analyze Wilcoxon:\n\n: {fileDir}")
+    df_wilcoxon = pd.read_csv(fileDir)
+    print(f"df_wilcoxon: {df_wilcoxon.head(10)}")
+
+    df_wilcoxon = df_wilcoxon.dropna()
+
+    outputDirectory = outputDirectory + "//stat-tests"
+    name = os.path.splitext(os.path.basename(fileDir))[0]
+    name = os.path.join(outputDirectory, name +'-final.csv')
+
+    results_out = open(name, "w+", newline='\n', encoding='utf-8')
+    results_out.write('Combination,Better-Than\n')
+    
+
+    row_df = next(df_wilcoxon.iterrows())[1]
+    curr_comb_name = str(row_df['Combination']).split('vs')[0].strip()
+    comb_better_amt = 0
+
+    for i,row in df_wilcoxon.iterrows():
+        
+        comb_name_right = str(row['Combination']).split('vs')[1].strip()
+        comb_name_left = str(row['Combination']).split('vs')[0].strip()
+        if comb_name_left != curr_comb_name:
+            results_out.write(f'{str(curr_comb_name)},{str(comb_better_amt)}\n')
+            comb_better_amt = 0
+            curr_comb_name = comb_name_left
+        if "-" not in comb_name_right:
+            if float(row['P-Value']) < 0.05 and float(row['W-Pos']) > float(row['W-Neg']):
+                #print(f"comb: {comb_name_left} vs: {comb_name_right} p: {float(row['P-Value'])}")
+                comb_better_amt = comb_better_amt + 1
+        
+    results_out.write(f'{str(curr_comb_name)},{str(comb_better_amt)}\n')
+    results_out.close()
+
+    return name
+
 
 def one_bayesian_one(fileDir, k, output_directory, runs=1):
     df = pd.read_csv(fileDir)
@@ -299,10 +290,6 @@ def multiple_bayesian_multiple(fileDir, output_directory, runs=1):
     df = pd.read_csv(fileDir)
     num_df = df.drop(columns=['File'])
 
-    p_left_lst = [[0]*len(num_df.columns) for i in enumerate(num_df.columns)]
-    p_rope_lst = [[0]*len(num_df.columns) for i in enumerate(num_df.columns)]
-    p_right_lst = [[0]*len(num_df.columns) for i in enumerate(num_df.columns)]
-
     output_directory = output_directory + "\\bayesian-tests"
 
     if not os.path.exists(output_directory):
@@ -310,9 +297,9 @@ def multiple_bayesian_multiple(fileDir, output_directory, runs=1):
         os.makedirs(output_directory)
         
     result_name = os.path.splitext(os.path.basename(fileDir))[0]
-    print(f"len: {len(os.path.splitext(os.path.basename(fileDir)))}")
-    print(f"{os.path.splitext(os.path.basename(fileDir))}")
     result_name = os.path.join(output_directory, result_name +'-bayes.csv')
+
+    print(len(num_df.columns))
 
     action = "Writing"
     if os.path.exists(result_name):
@@ -321,29 +308,106 @@ def multiple_bayesian_multiple(fileDir, output_directory, runs=1):
     
     results_out = open(result_name, "a", newline='\n', encoding='utf-8')
     results_out.write(f"Combination,P-Left,P-ROPE,P-Right\n")
-
-    ix = 0
-    iy = 0
+    """
     for col_x in tqdm(num_df.columns, desc=f"Performing bayesian analysis...", unit="col_x", leave=False):
         for col_y in tqdm(num_df.columns, desc=f"vs {col_x}...", unit="col_y", leave=False):
             combination = col_x[0:len(col_x)-4] + " vs " +  col_y[0:len(col_y)-4]
-            if col_x != col_y and ix >= iy:
+            if col_x != col_y and ("-" in col_x[0:len(col_x)-4]) and ("-" not in col_y[0:len(col_y)-4]):
                 x,y = map(np.asarray, (num_df[f'{col_x}'],num_df[f'{col_y}']))
                 left,rope,right = baycomp.two_on_multiple(x,y, rope = 0.01, runs=runs)
                 #left,rope,right = ((random.randint(1,10),random.randint(1,10),random.randint(1,10)))
-                p_left_lst[ix][iy] = left 
-                p_rope_lst[ix][iy] = rope
-                p_right_lst[ix][iy] = right
                 print(f"left: {left} rope: {rope} right: {right}")
 
                 results_out.write(f"{combination},{str(left)},{str(rope)},{str(right)}\n")
-            elif col_x != col_y:
-                results_out.write(f"{combination},{str(p_right_lst[iy][ix])},{str(p_rope_lst[iy][ix])},{str(p_left_lst[iy][ix])}\n")
-            ix = ix+1
-        ix = 0    
-        iy = iy+1
         results_out.write(f"\n")
-    results_out.close() 
+    results_out.close()
+    """
+    for col_x in tqdm(num_df.columns, desc=f"Performing bayesian analysis...", unit="col_x", leave=False):
+        for col_y in tqdm(num_df.columns, desc=f"vs {col_x}...", unit="col_y", leave=False):
+            combination = col_x[0:len(col_x)-4] + " vs " +  col_y[0:len(col_y)-4]
+            if col_x != col_y and ("-" not in col_y[0:len(col_y)-4]):
+                x,y = map(np.asarray, (num_df[f'{col_x}'],num_df[f'{col_y}']))
+                left,rope,right = baycomp.two_on_multiple(x,y, rope = 0.01, runs=runs)
+                #left,rope,right = ((random.randint(1,10),random.randint(1,10),random.randint(1,10)))
+                print(f"left: {left} rope: {rope} right: {right}")
+
+                results_out.write(f"{combination},{str(left)},{str(rope)},{str(right)}\n")
+        results_out.write(f"\n")
+    results_out.close()
+
+    return result_name
+
+def leo_bayesian(fileDir, output_directory, runs=1):
+    #aucs = pd.read_csv(basepath + "{name}.csv".format(name = filename))
+    aucs = pd.read_csv(fileDir)
+    classifiers = aucs.columns[1:]
+    m = [[None for j in range(i+1, len(classifiers))] for i in range(len(classifiers)-1)]
+    result_name = os.path.splitext(os.path.basename(fileDir))[0]
+    result_name = os.path.join(output_directory, result_name +'-leo-bayes.csv')
+    print(f"resultName: {result_name}")
+    
+    for i in tqdm(range(len(classifiers)-1)):
+        for j in range(1, len(classifiers)-i):
+            #print((i,j), (i, i+j))
+            m[i][j-1] = baycomp.two_on_multiple(aucs[classifiers[i]], aucs[classifiers[i+j]], 0.01)
+            #print(m[i][j-1])
+    c1 = []
+    c2 = []
+    wins = []
+    losses = []
+    for i in range(len(m)):
+        for j in range(len(m) - i):
+            c1.append(classifiers[i])
+            c2.append(classifiers[j+i+1])
+            wins.append(m[i][j][0])
+            losses.append(m[i][j][2])
+
+            c2.append(classifiers[i])
+            c1.append(classifiers[j+i+1])
+            wins.append(m[i][j][2])
+            losses.append(m[i][j][0])
+    df = pd.DataFrame({'c1': c1, 'c2': c2, 'pwin': wins, 'plose' : losses})
+    print(f"in leo bayes:\n{df.head(15)}")
+    csv_data = df.to_csv(result_name, index = False)
+    return result_name
+
+def leo_bayesian_figure(fileDir, output_directory, runs=1):
+    #aucs = pd.read_csv(basepath + "{name}.csv".format(name = filename))
+    aucs = pd.read_csv(fileDir)
+    classifiers = aucs.columns[1:]
+    m = [[None for j in range(i+1, len(classifiers))] for i in range(len(classifiers)-1)]
+    name = os.path.splitext(os.path.basename(fileDir))[0]
+    result_name = os.path.join(output_directory, name +'-leo-bayes-fig.csv')
+    img_name = os.path.join(output_directory, name + '-comb-kgv.png')
+    print(f"resultName: {result_name}")
+    
+    for i in tqdm(range(len(classifiers)-1)):
+        for j in range(1, len(classifiers)-i):
+            #print((i,j), (i, i+j))
+            m[i][j-1], fig = baycomp.two_on_multiple(aucs[classifiers[i]], aucs[classifiers[i+j]], 0.01, plot=True, names=('kgv', 'tw-qg-mch-cs-bhy'))
+            fig.savefig(img_name)
+
+            #print(m[i][j-1])
+    c1 = []
+    c2 = []
+    wins = []
+    losses = []
+    for i in range(len(m)):
+        for j in range(len(m) - i):
+            c1.append(classifiers[i])
+            c2.append(classifiers[j+i+1])
+            wins.append(m[i][j][0])
+            losses.append(m[i][j][2])
+
+            c2.append(classifiers[i])
+            c1.append(classifiers[j+i+1])
+            wins.append(m[i][j][2])
+            losses.append(m[i][j][0])
+    df = pd.DataFrame({'c1': c1, 'c2': c2, 'pwin': wins, 'plose' : losses})
+    print(f"in leo bayes:\n{df.head(15)}")
+    csv_data = df.to_csv(result_name, index = False)
+    return result_name
+    
 
 def separate(fileDir, output_directory):
     df = pd.read_csv(fileDir)
@@ -425,17 +489,24 @@ def average_k_runs_cross_validation(fileDir, k, output_directory):
     return auc_name, acc_name
 
 def append_results(fileDir, dir_to_append, outputDirectory):
+    #print(f"append: FileDir {fileDir} dir_to_append: {dir_to_append}")
     df_comb = pd.read_csv(fileDir)
+    #print(f"df_comb_size: {len(df_comb)}")
     df_original = pd.read_csv(dir_to_append)
 
-    df_comb = df_comb.sort_values('File')
-    df_original = df_original.sort_values('File')
-    print(f"df_comb: {df_comb.head(10)}")
-    print(f"\ndf_og: {df_original.head(10)}")
+    df_comb = df_comb.sort_values('File').reset_index(drop=True)
+    print(f"df_comb_size after reset: {len(df_comb)}")
+    df_original = df_original.sort_values('File').reset_index(drop=True)
+
+    print(f"comb: {df_comb.head(10)}")
+    #print(f"\n og: {df_original.tail(10)}")
+
     df_comb = df_comb.drop(['File'], axis=1)
 
     for col_name in df_comb.columns:
         df_original[f'{col_name}'] = df_comb[f'{col_name}']
+
+    print(f"dfff: {df_original.head(10)}")
 
     outputDirectory = outputDirectory + "\\combined-results"
 
@@ -452,8 +523,66 @@ def append_results(fileDir, dir_to_append, outputDirectory):
         os.remove(auc_name)
     
     csv_data = df_original.to_csv(auc_name, index = False)
+    #csv_data = df_comb.to_csv(auc_name, index=False)
     print(f"append_results: {auc_name}")
     return auc_name
+
+def sort_results(fileDir, outputDirectory):
+    df_comb = pd.read_csv(fileDir)
+    print(f"comb: {df_comb.head(10)}")
+    df_comb = df_comb.sort_values('File').reset_index(drop=True)
+    print(f"df_comb_size after reset: {len(df_comb)}")
+
+    print(f"comb: {df_comb.head(10)}")
+    outputDirectory = outputDirectory + "\\combined-results"
+
+    if not os.path.exists(outputDirectory):
+        print(f"Creating combined results directory: {outputDirectory}")
+        os.makedirs(outputDirectory)
+
+    auc_name = os.path.splitext(os.path.basename(fileDir))[0]
+    auc_name = os.path.join(outputDirectory, auc_name +'comb.csv')
+
+    action = "Writing"
+    if os.path.exists(auc_name):
+        action = "Overwriting"
+        os.remove(auc_name)
+    
+    csv_data = df_comb.to_csv(auc_name, index=False)
+    print(f"append_results: {auc_name}")
+    return auc_name
+
+def analyze_bayes(fileDir, outputDirectory):
+    df_bayes = pd.read_csv(fileDir)
+
+    df_bayes = df_bayes.dropna()
+
+    outputDirectory = outputDirectory + "//bayesian-tests"
+    name = os.path.splitext(os.path.basename(fileDir))[0]
+    name = os.path.join(outputDirectory, name +'-final.csv')
+
+    results_out = open(name, "w+", newline='\n', encoding='utf-8')
+    results_out.write('Combination,Better-Than\n')
+    
+
+    row_df = next(df_bayes.iterrows())[1]
+    curr_comb_name = str(row_df['Combination']).split('vs')[0].strip()
+    comb_better_amt = 0
+
+    for i,row in df_bayes.iterrows():
+        
+        comb_name_right = str(row['Combination']).split('vs')[1].strip()
+        comb_name_left = str(row['Combination']).split('vs')[0].strip()
+        if comb_name_left != curr_comb_name:
+            results_out.write(f'{str(curr_comb_name)},{str(comb_better_amt)}\n')
+            comb_better_amt = 0
+            curr_comb_name = comb_name_left
+        if "-" not in comb_name_right:
+            if float(row['P-Left']) >= 0.95:
+                comb_better_amt = comb_better_amt + 1
+        
+    results_out.write(f'{str(curr_comb_name)},{str(comb_better_amt)}\n')
+    results_out.close()
 
 
 def read_shdz_results(fileDir, fileName, outputDirectory):
@@ -488,6 +617,99 @@ def read_shdz_results(fileDir, fileName, outputDirectory):
     results_out.write(f"{'-'.join(names[2:])},{str(auc)},{str(acc)}\n")
     results_out.close()
     return name
+
+def shorten_name(col_name):
+    col_name = col_name.lower()
+    col_name = col_name.replace("-auc", "").replace("twoing", "tw").replace("quinlan gain", "qg").replace(
+    "gini impurity", "gi").replace("multi class hellinger", "mch").replace("chi squared", "cs").replace(
+    "g statistic", "gs").replace("marsh", "msh").replace("normalized gain", "ng").replace("kolmogorov", "kgv").replace(
+        "bhattacharyya", "bhy")
+
+    return col_name
+
+def convert_names(fileDir, types, outputDirectory):
+    outputDirectory = outputDirectory + "//med-bayesian-plots"
+    if not os.path.exists(outputDirectory):
+        print(f"Creating output directory: {outputDirectory}")
+        os.makedirs(outputDirectory)
+    name = os.path.splitext(os.path.basename(fileDir))[0]
+    name = os.path.join(outputDirectory, name+'.csv')
+
+    df = pd.read_csv(fileDir)
+    if types == 1:
+        new_c1 = [f'{shorten_name(x)}' for x in df['c1']]
+        new_c2 = [f'{shorten_name(x)}' for x in df['c2']]
+        df['c1'] = new_c1
+        df['c2'] = new_c2
+    elif types == 2:
+        df.rename(columns=lambda x:shorten_name(x), inplace=True)
+        df.rename(columns={'file':'File'}, inplace=True)
+    else:
+        raise Exception(f'Type: {type} is not valid')
+    
+    csv_data = df.to_csv(name, index=False)
+    return name
+
+def combine_probs_auc(probs, aucs, outputDirectory):
+    outputDirectory = outputDirectory + "//med-bayesian-plots"
+    if not os.path.exists(outputDirectory):
+        print(f"Creating output directory: {outputDirectory}")
+        os.makedirs(outputDirectory)
+    name = os.path.splitext(os.path.basename(probs))[0]
+    name = os.path.join(outputDirectory, name+'-med-bayes.csv')
+
+    df_probs = pd.read_csv(probs)
+    df_aucs = pd.read_csv(aucs)
+    df_aucs = df_aucs.drop(columns=['File'])
+
+    aucs_list = [{col:statistics.median(df_aucs[f'{col}'])} for col in df_aucs.columns]
+    #convert list of dictionaries into single dictionary
+    aucs_map = {k: v for d in aucs_list for k,v in d.items()}
+    
+    distribution_names = df_probs.c1.unique()
+    new_distribution_names = [col for col in distribution_names]
+    
+    median_auc_list = [{dist: (statistics.median(df_probs[df_probs['c1'] == dist]['pwin']), statistics.median(df_probs[df_probs['c1'] == dist]['plose']))} for dist in distribution_names]
+    median_auc_map = {k: v for d in median_auc_list for k,v in d.items()}
+
+    output_df = pd.DataFrame()
+    output_df['classifier'] = distribution_names
+    output_df['pwin'] = [median_auc_map.get(dist)[0] for dist in new_distribution_names]
+    output_df['plose'] = [median_auc_map.get(dist)[1] for dist in new_distribution_names]
+    output_df['AUC'] = [aucs_map.get(dist) for dist in new_distribution_names]
+
+    csv_data = output_df.to_csv(name, index=False)
+
+def set_for_cd_diagram(fileDir, outputDirectory):
+    df = pd.read_csv(fileDir)
+    num_db = len(df)
+    df = df.sort_values('File').reset_index(drop=True)
+    outputDirectory = outputDirectory + "//cd-diagrams"
+    name = os.path.splitext(os.path.basename(fileDir))[0]
+    name = os.path.join(outputDirectory, name +'-critdiff.csv')
+
+    if not os.path.exists(outputDirectory):
+        print(f"Creating combined results directory: {outputDirectory}")
+        os.makedirs(outputDirectory)
+
+    #results_out = open(name, "w+", newline='\n', encoding='utf-8')
+    #results_out.write('classifier_name,dataset_name,AUC\n')
+
+    datasets_names = df['File']
+    output_df = pd.DataFrame()
+    for col in df.columns:
+        if col != 'File':
+            cls_lst = [f'{shorten_name(col)}' for db in range(num_db)]
+            temp_df = pd.DataFrame()
+            temp_df['classifier_name'] = cls_lst
+            temp_df['dataset_name'] = df['File']
+            temp_df['AUC'] = df[f'{col}']
+            output_df = pd.concat([output_df, temp_df])
+    
+    for col in output_df.columns:
+        print(f"col: {col}")
+    csv_data = output_df.to_csv(name, index = False)
+        
 
 def read_confusion_matrix(fileDir, fileName, outputDirectory):
     flag = False
@@ -564,19 +786,55 @@ def WritePatternsCSV(patterns, originalFile, outputDirectory, suffix=None):
 
     return name
 
-def pipeline(fileDir, originalDir, column_names, output_directory, k):
+def pipeline(fileDir, originalDir, output_directory, k):
     #joined_file = join_prelim_results(fileDir, output_directory)
-    order_file = order_results(fileDir, column_names, output_directory)
-    transpose_file = transpose_results(order_file, column_names, output_directory)
-    transpose_auc, transpose_acc = separate(transpose_file, output_directory)
-    auc_avg, acc_avg = average_k_runs_cross_validation(transpose_auc, k, output_directory)
-    auc_avg_comb = append_results(auc_avg, originalDir, output_directory)
-    multiple_bayesian_multiple(auc_avg_comb, output_directory)
+    order_file = order_results(fileDir, output_directory)
+    #transpose_file = transpose_results(order_file, column_names, output_directory)
+    order_auc, order_acc = separate(order_file, output_directory)
+    auc_avg, acc_avg = average_k_runs_cross_validation(order_auc, k, output_directory)
+    #auc_avg_comb = append_results(auc_avg, originalDir, output_directory)     
+    #bayes_auc = multiple_bayesian_multiple(auc_avg_comb, output_directory)
+    #analyze_bayes(bayes_auc, output_directory)
+    bayes_auc = leo_bayesian(auc_avg, output_directory)
 
-def pipeline_wilcoxon(fileDir, originalDir, column_names, output_directory):
-    order_file = order_results(fileDir, column_names, output_directory)
-    transpose_file = transpose_results(order_file, column_names, output_directory)
-    transpose_auc, transpose_acc = separate(transpose_file, output_directory)
-    #auc_avg, acc_avg = average_k_runs_cross_validation(transpose_auc, k, output_directory)
-    transpose_auc_comb = append_results(transpose_auc, originalDir, output_directory)
-    wilcoxon(transpose_auc_comb, output_directory)
+def pipeline_leo(fileDir, originalDir, output_directory, k):
+    #order_file = order_results(fileDir, output_directory)
+    #order_auc, order_acc = separate(order_file, output_directory)
+    #auc_avg, acc_avg = average_k_runs_cross_validation(order_auc, k, output_directory)
+    #auc_avg_comb = append_results(auc_avg, originalDir, output_directory)
+    #auc_avg_comb = append_results(fileDir, originalDir, output_directory)     
+    #bayes_auc = multiple_bayesian_multiple(auc_avg_comb, output_directory)
+    #analyze_bayes(bayes_auc, output_directory)
+    bayes_auc = leo_bayesian(fileDir, output_directory)
+    shortend_bayes_auc = convert_names(bayes_auc, 1, output_directory)
+    shortened_auc = convert_names(fileDir, 2, output_directory)
+    combine_probs_auc(shortend_bayes_auc, shortened_auc, output_directory)
+
+def pipeline_wilcoxon(fileDir, originalDir, output_directory, k):
+    order_file = order_results(fileDir, output_directory)
+    #transpose_file = transpose_results(order_file, column_names, output_directory)
+    order_auc, order_acc = separate(order_file, output_directory)
+    auc_avg, acc_avg = average_k_runs_cross_validation(order_auc, k, output_directory)
+    transpose_auc_comb = append_results(auc_avg, originalDir, output_directory)
+    wilcoxon_auc = wilcoxon(transpose_auc_comb, output_directory)
+    analyze_wilcoxon(wilcoxon_auc, output_directory)
+
+def pipeline_wilcoxon_cd(fileDir, output_directory):
+    #This method begins from criticial difference file
+    order_file = order_results(fileDir, output_directory)
+    #transpose_file = transpose_results(order_file, column_names, output_directory)
+    order_auc, order_acc = separate(order_file, output_directory)
+    #auc_avg, acc_avg = average_k_runs_cross_validation(order_auc, k, output_directory)
+    auc_comb = sort_results(order_auc, output_directory)
+    wilcoxon_auc = wilcoxon(auc_comb, output_directory)
+    analyze_wilcoxon(wilcoxon_auc, output_directory)
+
+def pipeline_cd(fileDir, originalDir, output_directory, k):
+    order_file = order_results(fileDir, output_directory)
+    order_auc, order_acc = separate(order_file, output_directory)
+    auc_avg, acc_avg = average_k_runs_cross_validation(order_auc, k, output_directory)
+    auc_comb = append_results(auc_avg, originalDir, output_directory)
+    set_for_cd_diagram(auc_comb, output_directory)
+
+def pipeline_med_bayes(probsFile, aucFile, output_directory):
+    pass

@@ -64,6 +64,7 @@ class Dataset(ABC):
             return -1
         else:
             try:
+                #print(f"values: {values}")
                 return_val = values.index(value)
                 return return_val
             except ValueError:
@@ -101,6 +102,7 @@ class Dataset(ABC):
 
 class PandasDataset(Dataset):
     def __init__(self, X,y):
+        #if (isinstance(Dataframe))
         super()
         self.Model = self.get_model_list(X,y)
         self.__Instances = self.combine_X_y(X,y)
@@ -153,6 +155,14 @@ class PandasDataset(Dataset):
         instances_df = X.copy(deep=True)
         instances_df[f'class'] = y['class']
         return instances_df.values
+    """
+    def GetClassValue(self, y_instance):
+        print(f"aaa")
+        print(f"y: {y_instance}")
+        print(f"Class: {self.Class[0]} & y_inst: {y_instance[0]}")
+        print(f"self: {self.GetIndexOfValue(self.Class[0], y_instance[0])}")
+        return self.GetIndexOfValue(self.Class[0], y_instance[0])
+    """
             
 
 class FileDataset(Dataset):

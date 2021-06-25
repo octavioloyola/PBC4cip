@@ -78,7 +78,8 @@ def convert_dat_to_csv(file):
                 else :
                     newline.replace(' ', '')
                 new_file.write(newline)
-    return None
+
+    return new_f
 
 
 def ReadPatternsBinary(originalFile, outputDirectory, delete, suffix=None):

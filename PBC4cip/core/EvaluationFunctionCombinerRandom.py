@@ -25,23 +25,17 @@ class EvaluationFunctionCombinerRandom:
         self.borda_count_table = pd.DataFrame(self.borda_count_table)
         self.borda_count_table.columns = [f'CS{i}' for i,_ in enumerate(self.borda_count_table)]
         self.borda_count_table.index = [name for name in self.evaluation_functions]
-
-        #print(f"borda_count: {self.borda_count_table}")
     
         for index in self.borda_count_table.index:
             self.borda_count_table.loc[index] = self.borda_count_table.loc[index].rank(ascending=False)
         rank_lst = [self.borda_count_table[f'{col}'].sum() for col in list(self.borda_count_table) ]
-        #print(f"rank_lst:\n {rank_lst}")
         best_idx = smallest_idx(rank_lst)
-        #print(f"best_idx: {best_idx}")
 
         self.borda_count_table = [] #reset for future cycles
-        #rand_smallest_idx = random_small_idx(rank_lst,  int(math.log(len(rank_lst), 2) +1))
         log_rank_lst_size = int(math.log(len(rank_lst), 2) +1)
         if log_rank_lst_size > 3:
             log_rank_lst_size = 3
         rand_smallest_idx = random_small_idx(rank_lst, log_rank_lst_size)
-        #print(f"random_smallest: {rand_smallest_idx}")
         return rand_smallest_idx
 
     def get_functions_dict(self, func_names):

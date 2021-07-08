@@ -64,7 +64,6 @@ class Dataset(ABC):
             return -1
         else:
             try:
-                #print(f"values: {values}")
                 return_val = values.index(value)
                 return return_val
             except ValueError:
@@ -102,7 +101,6 @@ class Dataset(ABC):
 
 class PandasDataset(Dataset):
     def __init__(self, X,y):
-        #if (isinstance(Dataframe))
         super()
         self.Model = self.get_model_list(X,y)
         self.__Instances = self.combine_X_y(X,y)
@@ -256,14 +254,6 @@ class FeatureInformation(object):
             for value in range(len(self.Distribution)):
                 self.Distribution[value] = len(
                     list(filter(lambda instance: self.Dataset.GetFeatureValue(self.Feature, instance) == value and not self.Dataset.IsMissing(self.Feature, instance), self.Dataset.Instances)))
-            #self.ValueProbability = list(
-                #map(lambda value: value / sum(self.Distribution), self.Distribution))
-            
-            #self.Ratio = list(
-                #map(lambda value: value / min(self.Distribution), self.Distribution))
-
-            
-
         else:
             if len(nonMissingValues) > 0:
                 self.MinValue = min(list(map(

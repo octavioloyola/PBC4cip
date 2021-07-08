@@ -36,7 +36,6 @@ class WinningSplitSelector:
             if len(self.List) > self.__whichBetterToFind:
                 self.List.remove(self.List[self.__whichBetterToFind])
             index = min(self.__whichBetterToFind-1, len(self.List)-1)
-            #print(f"Last self.List: {self.List}")
 
             self.MinStoredValue = self.List[index][0]
             return True

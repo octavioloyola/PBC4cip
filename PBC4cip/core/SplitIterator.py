@@ -10,6 +10,7 @@ from .FeatureSelectors import CutPointSelector, MultipleValuesSelector, ValueAnd
 from copy import copy, deepcopy
 import numpy as np
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
+count = 0
 
 class SplitIteratorProvider(object):
     def __init__(self, dataset):
@@ -141,6 +142,8 @@ class NumericSplitIterator(SplitIterator):
         self.__lastClassValue = self.FindNextClass(0)
 
     def FindNext(self):
+        global count
+        count = count + 1
         super().FindNext()
         if (self.__currentIndex >= len(self.__sortedInstances) - 1):
             return False
@@ -202,9 +205,7 @@ class NominalSplitIterator(SplitIterator):
         self.__totalDistribution = [0]*self._numClasses
 
         for instance in instances:
-            #print(f"instanceElem: {instance[0]}")
             if self.IsMissing(instance[0]):
-                #print(f"instanceElem: {instance[0]}")
                 continue
             value = self.GetFeatureValue(instance[0])
             current = [0]*self._numClasses

@@ -19,7 +19,7 @@ from tqdm import tqdm
 
 class PBC4cip:
     def __init__(self, tree_count=100, filtering=False, multivariate = False, 
-    distribution_evaluator='quinlan', file_dataset = None):
+    distribution_evaluator='quinlan gain', file_dataset = None):
         self.File = None
         self.__miner = None
         if filtering:

@@ -81,7 +81,6 @@ def run_C45(trainFile, outputDirectory, testFile, resultsId, distribution_evalua
 
     for instance in X_test:
         inst_classify = dt_classifier.Classify(instance)
-        #print(f"x_classify: {inst_classify}" )
         y_scores.append(inst_classify)
     
     y_pred = [ArgMax(instance) for instance in y_scores]
@@ -140,10 +139,7 @@ def run_C45_find_best(trainFile, outputDirectory, testFile, resultsId, eval_func
                 inst_classify = dt_classifier.Classify(instance)
                 y_scores.append(inst_classify)
 
-           #print(f"y_scores: {y_scores}")
             y_pred = [ArgMax(instance) for instance in y_scores]
-            #print(f"y_pred: {y_pred}")
-            #print(f"Class: {pandas_dataset.Class}")
             confusion, acc, current_auc = score(y_pred, y_test_fold, pandas_dataset.Class[1])
             val_auc += (current_auc / 5)
             
@@ -194,12 +190,9 @@ def run_C45_combinations(trainFile, outputDirectory, testFile, resultsId, distri
                     func_combinations.append(list(func_combinations_elem))
     
         func_combinations = list(x for x,_ in itertools.groupby(func_combinations))
-        #print(f"filter: {func_combinations} len: {len(func_combinations)}")
     else:
         func_combinations = non_filtered_func_combinations
     
-    print(f"lenFuncComb: {len(func_combinations)}")
-    #print(f"filters: {func_combinations}")
     for combination in func_combinations:
         comb_name = "-".join(combination)
         if comb_name not in avoid_funcs:
@@ -241,10 +234,7 @@ def split_data(train, test, class_name = 'class'):
 
 def score(predicted, y, class_dist = None):
         if class_dist is None:
-            #print(f"score?")
-            #print(f"y: {y}")
             y_class_dist = get_col_dist(y[f'{y.columns[0]}'])
-            #print(f"class_dist: {y_class_dist}")
         else:
             y_class_dist = class_dist
 
@@ -297,7 +287,6 @@ def Train_and_test(X_train, y_train, X_test, y_test, treeCount, multivariate, fi
 
 def test_PBC4cip(trainFile, outputDirectory, treeCount, multivariate, filtering, testFile, resultsId, delete, 
 distribution_evaluator, class_column): 
-    print(f"aaaaaaaaaaaaa")
     #Uncomment this to work with text files instead of dataframes  
     """
     X_train, y_train = returnX_y(trainFile)
@@ -306,22 +295,14 @@ distribution_evaluator, class_column):
     classifier = PBC4cip(tree_count=treeCount, multivariate=multivariate, filtering=filtering, file_dataset=trainFile, distribution_evaluator=distribution_evaluator)
     patterns = classifier.fit(X_train, y_train)
     y_test_scores = classifier.score_samples(X_test)
-    #print(f"y test scores: {y_test_scores}")
     y_pred = classifier.predict(X_test)
-    #print(f"y_pred: {y_pred}")
     confusion, acc, auc = score_txtfile(y_pred, y_test, FileDataset(trainFile))
-    for pattern in patterns:
-        #print(f"patt: {pattern}")
-        pass
     """
     train_df, test_df = import_data(trainFile, testFile)
     X_train, y_train, X_test, y_test = split_data(train_df, test_df, class_column)
-    print(f"X_train: {type(X_train)}")
     classifier = PBC4cip(tree_count=treeCount, multivariate=multivariate, filtering=filtering, distribution_evaluator=distribution_evaluator)
     patterns = classifier.fit(X_train, y_train)
-    #print(f"lenPatterns: {len(patterns)}")
     for pattern in patterns:
-        #print(f"patt: {pattern}")
         pass
 
     y_test_scores = classifier.score_samples(X_test)

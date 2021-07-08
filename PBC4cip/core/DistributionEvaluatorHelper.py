@@ -7,6 +7,7 @@ def get_distribution_evaluator(eval_func_name):
         evaluator_dict = {
             'twoing': Twoing,
             'quinlan gain': QuinlanGain,
+            'qg': QuinlanGain,
             'gini impurity': GiniImpurity,
             'hellinger': Hellinger,
             'multi class hellinger': MultiClassHellinger,
@@ -18,11 +19,11 @@ def get_distribution_evaluator(eval_func_name):
             'kolmogorov': KolmogorovDependence,
             'bhattacharyya': MultiClassBhattacharyya,
             'combiner': EvaluationFunctionCombiner,
-            'combiner-random': EvaluationFunctionCombinerRandom
+            'combiner random': EvaluationFunctionCombinerRandom
         }
 
-        if eval_func_name.lower() in evaluator_dict:
-            return evaluator_dict[eval_func_name.lower()]
+        if eval_func_name.lower().replace('-', ' ') in evaluator_dict:
+            return evaluator_dict[eval_func_name.lower().replace('-', ' ')]
         else:
             raise Exception(f"{eval_func_name.lower()} is not a supported evaluation function")
     

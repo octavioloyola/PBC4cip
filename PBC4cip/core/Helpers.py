@@ -23,7 +23,6 @@ def smallest_idx(source):
     return idx
 
 def random_small_idx(source, random_size):
-    #print(f"random_size: {random_size}")
     if len(source) == 0:
         raise Exception("source must have at least 1 element")
     

@@ -139,7 +139,6 @@ def ChiSquared(parent, children):
         return result
     except ZeroDivisionError:
         return float('nan')
-    #return result
 
 def DKM (parent, children):
     result = __G(parent)

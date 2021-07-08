@@ -251,7 +251,6 @@ def one_bayesian_one(fileDir, k, output_directory, runs=1):
 def one_bayesian_multiple(fileDir, k, output_directory, runs=1):
     df = pd.read_csv(fileDir)
     num_df = df.drop(columns=['File'])
-    #iterations = df.shape[0] // k
     iterations = 1
 
     p_left_lst = []
@@ -308,20 +307,7 @@ def multiple_bayesian_multiple(fileDir, output_directory, runs=1):
     
     results_out = open(result_name, "a", newline='\n', encoding='utf-8')
     results_out.write(f"Combination,P-Left,P-ROPE,P-Right\n")
-    """
-    for col_x in tqdm(num_df.columns, desc=f"Performing bayesian analysis...", unit="col_x", leave=False):
-        for col_y in tqdm(num_df.columns, desc=f"vs {col_x}...", unit="col_y", leave=False):
-            combination = col_x[0:len(col_x)-4] + " vs " +  col_y[0:len(col_y)-4]
-            if col_x != col_y and ("-" in col_x[0:len(col_x)-4]) and ("-" not in col_y[0:len(col_y)-4]):
-                x,y = map(np.asarray, (num_df[f'{col_x}'],num_df[f'{col_y}']))
-                left,rope,right = baycomp.two_on_multiple(x,y, rope = 0.01, runs=runs)
-                #left,rope,right = ((random.randint(1,10),random.randint(1,10),random.randint(1,10)))
-                print(f"left: {left} rope: {rope} right: {right}")
 
-                results_out.write(f"{combination},{str(left)},{str(rope)},{str(right)}\n")
-        results_out.write(f"\n")
-    results_out.close()
-    """
     for col_x in tqdm(num_df.columns, desc=f"Performing bayesian analysis...", unit="col_x", leave=False):
         for col_y in tqdm(num_df.columns, desc=f"vs {col_x}...", unit="col_y", leave=False):
             combination = col_x[0:len(col_x)-4] + " vs " +  col_y[0:len(col_y)-4]
@@ -338,7 +324,6 @@ def multiple_bayesian_multiple(fileDir, output_directory, runs=1):
     return result_name
 
 def leo_bayesian(fileDir, output_directory, runs=1):
-    #aucs = pd.read_csv(basepath + "{name}.csv".format(name = filename))
     aucs = pd.read_csv(fileDir)
     classifiers = aucs.columns[1:]
     m = [[None for j in range(i+1, len(classifiers))] for i in range(len(classifiers)-1)]
@@ -348,9 +333,7 @@ def leo_bayesian(fileDir, output_directory, runs=1):
     
     for i in tqdm(range(len(classifiers)-1)):
         for j in range(1, len(classifiers)-i):
-            #print((i,j), (i, i+j))
             m[i][j-1] = baycomp.two_on_multiple(aucs[classifiers[i]], aucs[classifiers[i+j]], 0.01)
-            #print(m[i][j-1])
     c1 = []
     c2 = []
     wins = []
@@ -372,7 +355,6 @@ def leo_bayesian(fileDir, output_directory, runs=1):
     return result_name
 
 def leo_bayesian_figure(fileDir, output_directory, runs=1):
-    #aucs = pd.read_csv(basepath + "{name}.csv".format(name = filename))
     aucs = pd.read_csv(fileDir)
     classifiers = aucs.columns[1:]
     m = [[None for j in range(i+1, len(classifiers))] for i in range(len(classifiers)-1)]
@@ -383,11 +365,8 @@ def leo_bayesian_figure(fileDir, output_directory, runs=1):
     
     for i in tqdm(range(len(classifiers)-1)):
         for j in range(1, len(classifiers)-i):
-            #print((i,j), (i, i+j))
             m[i][j-1], fig = baycomp.two_on_multiple(aucs[classifiers[i]], aucs[classifiers[i+j]], 0.01, plot=True, names=('kgv', 'tw-qg-mch-cs-bhy'))
             fig.savefig(img_name)
-
-            #print(m[i][j-1])
     c1 = []
     c2 = []
     wins = []
@@ -457,7 +436,7 @@ def average_k_runs_cross_validation(fileDir, k, output_directory):
         os.makedirs(output_directory)
 
     auc_name = os.path.splitext(os.path.basename(fileDir))[0]
-    auc_name = os.path.join(output_directory, auc_name +'auc-avg-k' + str(k) + '.csv')
+    auc_name = os.path.join(output_directory, auc_name +'-auc-avg-k' + str(k) + '.csv')
 
     action = "Writing"
     if os.path.exists(auc_name):
@@ -489,9 +468,7 @@ def average_k_runs_cross_validation(fileDir, k, output_directory):
     return auc_name, acc_name
 
 def append_results(fileDir, dir_to_append, outputDirectory):
-    #print(f"append: FileDir {fileDir} dir_to_append: {dir_to_append}")
     df_comb = pd.read_csv(fileDir)
-    #print(f"df_comb_size: {len(df_comb)}")
     df_original = pd.read_csv(dir_to_append)
 
     df_comb = df_comb.sort_values('File').reset_index(drop=True)
@@ -499,7 +476,6 @@ def append_results(fileDir, dir_to_append, outputDirectory):
     df_original = df_original.sort_values('File').reset_index(drop=True)
 
     print(f"comb: {df_comb.head(10)}")
-    #print(f"\n og: {df_original.tail(10)}")
 
     df_comb = df_comb.drop(['File'], axis=1)
 

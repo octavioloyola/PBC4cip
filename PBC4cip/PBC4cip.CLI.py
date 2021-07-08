@@ -241,7 +241,6 @@ def score(predicted, y, class_dist = None):
         real = list(map(lambda instance: get_idx_val(y_class_dist, instance), y[f'{y.columns[0]}']))
         numClasses = len(y_class_dist)
         
-        
         confusion = [[0]*numClasses for i in range(numClasses)]
         classified_as = 0
         error_count = 0
@@ -249,7 +248,6 @@ def score(predicted, y, class_dist = None):
         for i in range(len(real)):
             if real[i] != predicted[i]:
                 error_count = error_count + 1
-            
             confusion[real[i]][predicted[i]] = confusion[real[i]][predicted[i]] + 1
 
         acc = 100.0 * (len(real) - error_count) / len(real)

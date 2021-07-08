@@ -26,7 +26,7 @@ def score(predicted, y):
         y_class_dist = get_col_dist(y[f'{y.columns[0]}'])
         real = list(map(lambda instance: get_idx_val(y_class_dist, instance), y[f'{y.columns[0]}']))
         numClasses = len(y_class_dist)
-        confusion = [[0]*2 for i in range(numClasses)]
+        confusion = [[0]* numClasses for i in range(numClasses)]
         classified_as = 0
         error_count = 0
 
@@ -70,6 +70,6 @@ def test_PBC4cip(trainFile, testFile):
     
 if __name__ == '__main__':
     current_location = os.path.dirname(os.path.abspath(__file__))
-    trainFile = current_location + '\\cleveland-0_vs_4-5-3tra.csv'
-    testFile = current_location + '\\cleveland-0_vs_4-5-3tst.csv'
+    trainFile = current_location + '\\train.csv'
+    testFile = current_location + '\\test.csv'
     test_PBC4cip(trainFile, testFile)

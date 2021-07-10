@@ -3,6 +3,7 @@ from .DistributionEvaluator import Twoing, QuinlanGain, GiniImpurity, MultiClass
 from .DistributionEvaluator import DKM, G_Statistic, MARSH, NormalizedGain, KolmogorovDependence
 from .EvaluationFunctionCombiner import EvaluationFunctionCombiner
 from .EvaluationFunctionCombinerRandom import EvaluationFunctionCombinerRandom
+from .InstantRunoffVoting import InstantRunoffVoting
 def get_distribution_evaluator(eval_func_name):
         evaluator_dict = {
             'twoing': Twoing,
@@ -19,7 +20,8 @@ def get_distribution_evaluator(eval_func_name):
             'kolmogorov': KolmogorovDependence,
             'bhattacharyya': MultiClassBhattacharyya,
             'combiner': EvaluationFunctionCombiner,
-            'combiner random': EvaluationFunctionCombinerRandom
+            'combiner random': EvaluationFunctionCombinerRandom,
+            'irv': InstantRunoffVoting
         }
 
         if eval_func_name.lower().replace('-', ' ') in evaluator_dict:

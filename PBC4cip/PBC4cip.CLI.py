@@ -64,8 +64,10 @@ def run_C45(trainFile, outputDirectory, testFile, resultsId, distribution_evalua
     X_test, y_test = returnX_y(testFile)
     file_dataset = FileDataset(trainFile)
     dt_builder = DecisionTreeBuilder(file_dataset, X_train, y_train)
+
+    print(f"dt: {dt_builder}")
     
-    if distribution_evaluator == 'combiner' or distribution_evaluator == 'combiner-random':
+    if distribution_evaluator in ['combiner','combiner-random', 'irv']:
         with open(evaluationFunctionDir, "r") as f:
             eval_functions = f.readlines()
             eval_functions = [line.replace("\n", "") for line in eval_functions]
@@ -154,7 +156,7 @@ def run_C45_find_best(trainFile, outputDirectory, testFile, resultsId, eval_func
 
 def run_C45_combinations(trainFile, outputDirectory, testFile, resultsId, distribution_evaluator, evaluationFunctionDir,
  combination_size, required_funcs = None, comb_to_avoid = None):
-    if not (distribution_evaluator == 'combiner' or distribution_evaluator == 'combiner-random'):
+    if not (distribution_evaluator in ['combiner','combiner-random', 'irv']):
         raise Exception(f"Evaluation measure {distribution_evaluator} not supported for run_C45_combinations")
     with open(evaluationFunctionDir, "r") as f:
         eval_functions = f.readlines()
@@ -257,7 +259,7 @@ def score(predicted, y, class_dist = None):
 
 def score_txtfile(predicted, y, dataset):
     real = list(map(lambda instance: dataset.GetClassValue(instance), y))
-    print(f"predicted:{predicted}\ny:{y}\nreal:{real}")
+    #print(f"predicted:{predicted}\ny:{y}\nreal:{real}")
     numClasses = len(dataset.Class[1])
     confusion = [[0]*numClasses for i in range(numClasses)]
     classified_as = 0

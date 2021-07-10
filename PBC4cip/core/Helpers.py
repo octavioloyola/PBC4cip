@@ -22,6 +22,17 @@ def smallest_idx(source):
             val = value 
     return idx
 
+def largest_idx(source):
+    if len(source) == 0:
+        raise Exception("source must have at least 1 element")
+    curr_largest = source[0]
+    idx = 0
+    for i,value in enumerate(source):
+        if value > curr_largest:
+            idx = i
+            curr_largest = value
+    return idx
+
 def random_small_idx(source, random_size):
     if len(source) == 0:
         raise Exception("source must have at least 1 element")

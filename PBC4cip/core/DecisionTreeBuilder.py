@@ -9,6 +9,7 @@ from .SplitIterator import SplitIteratorProvider, MultivariateSplitIteratorProvi
 from .ForwardFeatureIterator import ForwardFeatureIterator
 from .DistributionTester import PureNodeStopCondition, AlwaysTrue
 from .EvaluationFunctionCombiner import EvaluationFunctionCombiner
+from .InstantRunoffVoting import InstantRunoffVoting
 
 class DecisionTreeBuilder():
     def __init__(self, dataset, X, y):
@@ -127,7 +128,7 @@ class DecisionTreeBuilder():
                         if currentGain >= self.MinimalSplitGain:
                             winningSplitSelector.EvaluateThis(
                                 currentGain, splitIterator)
-        else:
+        elif isinstance(self.distributionEvaluator, EvaluationFunctionCombiner):
             for feature in sampleFeatures:
                 if feature != self.Dataset.Class[0]:
                     splitIterator = self.SplitIteratorProvider.GetSplitIterator(feature)
@@ -136,6 +137,25 @@ class DecisionTreeBuilder():
                         self.distributionEvaluator.borda_count(node.Data, splitIterator.CurrentDistribution)
 
             winning_split_index = self.distributionEvaluator.borda_count_evaluate()
+            idx = 0
+            for feature in sampleFeatures:
+                if feature != self.Dataset.Class[0]:
+                    splitIterator = self.SplitIteratorProvider.GetSplitIterator(feature)
+                    splitIterator.Initialize(instanceTuples)
+                    while splitIterator.FindNext():
+                        if idx == winning_split_index:
+                            winningSplitSelector.List = list(tuple())
+                            winningSplitSelector.EvaluateThis(None, splitIterator)
+                        idx = idx + 1
+        elif isinstance(self.distributionEvaluator, InstantRunoffVoting):
+            for feature in sampleFeatures:
+                if feature != self.Dataset.Class[0]:
+                    splitIterator = self.SplitIteratorProvider.GetSplitIterator(feature)
+                    splitIterator.Initialize(instanceTuples)
+                    while splitIterator.FindNext():
+                        self.distributionEvaluator.irv(node.Data, splitIterator.CurrentDistribution)
+
+            winning_split_index = self.distributionEvaluator.irv_evaluate()
             idx = 0
             for feature in sampleFeatures:
                 if feature != self.Dataset.Class[0]:

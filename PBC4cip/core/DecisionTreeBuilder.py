@@ -105,6 +105,7 @@ class DecisionTreeBuilder():
         return result
 
     def __FillNode(self, node, instanceTuples, level, currentContext):
+        #print(f"nodeData: {node.Data}")
         if self.StopCondition(node.Data, self.Dataset.Model, self.Dataset.Class):
             return
         if self.MaxDepth >= 0 and (level >= self.MaxDepth - 1):

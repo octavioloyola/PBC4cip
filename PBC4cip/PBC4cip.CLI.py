@@ -21,6 +21,7 @@ from core.SupervisedClassifier import DecisionTreeClassifier
 from core.Helpers import ArgMax, convert_to_ndarray, get_col_dist, get_idx_val
 from core.Dataset import Dataset, FileDataset, PandasDataset
 from core.ResultsAnalyzer import show_results, wilcoxon, order_results, separate
+from core.ResultsAnalyzer import prepare_idv_files
 from core.ResultsAnalyzer import one_bayesian_one, multiple_bayesian_multiple
 from core.ResultsAnalyzer import one_bayesian_multiple, average_k_runs_cross_validation
 from core.ResultsAnalyzer import append_results, join_prelim_results,analyze_bayes
@@ -155,17 +156,23 @@ def run_C45_find_best(trainFile, outputDirectory, testFile, resultsId, eval_func
 
 
 def run_C45_combinations(trainFile, outputDirectory, testFile, resultsId, distribution_evaluator, evaluationFunctionDir,
- combination_size, required_funcs = None, comb_to_avoid = None):
+ combination_size, required_funcs_base = None, required_funcs = None, comb_to_avoid = None):
     if not (distribution_evaluator in ['combiner','combiner-random', 'irv']):
         raise Exception(f"Evaluation measure {distribution_evaluator} not supported for run_C45_combinations")
     with open(evaluationFunctionDir, "r") as f:
         eval_functions = f.readlines()
         eval_functions = [line.replace("\n", "").strip() for line in eval_functions]
     
-    if required_funcs is not None:
-        with open(required_funcs, "r") as f:
+    if required_funcs_base is not None:
+        with open(required_funcs_base, "r") as f:
             required_lst = f.readlines()
             required_lst = [line.replace("\n", "").strip() for line in required_lst]
+        
+    required_curr_lst = []
+    if required_funcs is not None:
+        with open(required_funcs, "r") as f:
+            required_curr_lst = f.readlines()
+            required_curr_lst = [line.replace("\n", "").strip() for line in required_curr_lst]
 
     avoid_funcs = []
     if comb_to_avoid is not None:
@@ -184,7 +191,7 @@ def run_C45_combinations(trainFile, outputDirectory, testFile, resultsId, distri
 
     non_filtered_func_combinations = list(itertools.combinations(eval_functions, combination_size))
     func_combinations = []
-    if required_funcs is not None:
+    if required_funcs_base is not None:
         for i in range(len(non_filtered_func_combinations)):
             func_combinations_elem = list(non_filtered_func_combinations[i])
             for comb in required_lst:
@@ -192,27 +199,31 @@ def run_C45_combinations(trainFile, outputDirectory, testFile, resultsId, distri
                     func_combinations.append(list(func_combinations_elem))
     
         func_combinations = list(x for x,_ in itertools.groupby(func_combinations))
+        print(f"len: {len(func_combinations)}")
     else:
         func_combinations = non_filtered_func_combinations
-    
+        #func_combinations = [('Chi Squared', 'Bhattacharyya')]
+        
     for combination in func_combinations:
+        #print(f"combination: {combination}")
         comb_name = "-".join(combination)
         if comb_name not in avoid_funcs:
-            dt_builder.distributionEvaluator = dt_builder.distributionEvaluator(list(combination))
-            dt = dt_builder.Build()
-            dt_classifier = DecisionTreeClassifier(dt)
-            y_scores = []
-            for instance in X_test:
-                inst_classify = dt_classifier.Classify(instance)
-                y_scores.append(inst_classify)
+            if len(required_curr_lst) == 0 or len(required_curr_lst) != 0 and all([x in combination for x in required_curr_lst]):
+                dt_builder.distributionEvaluator = dt_builder.distributionEvaluator(list(combination))
+                dt = dt_builder.Build()
+                dt_classifier = DecisionTreeClassifier(dt)
+                y_scores = []
+                for instance in X_test:
+                    inst_classify = dt_classifier.Classify(instance)
+                    y_scores.append(inst_classify)
     
-            y_pred = [ArgMax(instance) for instance in y_scores]
-            confusion, acc, auc = score_txtfile(y_pred, y_test, file_dataset)
+                y_pred = [ArgMax(instance) for instance in y_scores]
+                confusion, acc, auc = score_txtfile(y_pred, y_test, file_dataset)
 
-            WriteResultsCSV(confusion, acc, auc, 0, testFile, outputDirectory, resultsId, "Not applicable", distribution_evaluator,
-            functions_to_combine=list(combination))
-            show_results(confusion, acc, auc, 0)
-            dt_builder.distributionEvaluator = get_distribution_evaluator(distribution_evaluator)
+                WriteResultsCSV(confusion, acc, auc, 0, testFile, outputDirectory, resultsId, "Not applicable", distribution_evaluator,
+                functions_to_combine=list(combination))
+                show_results(confusion, acc, auc, 0)
+                dt_builder.distributionEvaluator = get_distribution_evaluator(distribution_evaluator)
     
 def split_data(train, test, class_name = 'class'):
     if train.shape[1] != train.shape[1]:
@@ -370,7 +381,7 @@ def Execute(args):
             , args.evaluation_functions)
         elif args.analysis == 'runC45Combinations':
             run_C45_combinations(training_files[f], args.output_directory,  testing_files[f], resultsId, args.distribution_evaluation
-            , args.evaluation_functions, args.combination_size, args.required_funcs, args.avoid_funcs)
+            , args.evaluation_functions, args.combination_size, args.required_funcs_base, args.required_funcs, args.avoid_funcs)
         elif args.analysis == 'runC45Multiple':
             run_C45_multiple(training_files[f], args.output_directory,  testing_files[f], resultsId
             , args.evaluation_functions, args.evaluation_functions_list)
@@ -396,6 +407,8 @@ def Execute(args):
             sort_results(training_files[f], args.output_directory)
         elif args.analysis == 'join-prelim':
             join_prelim_results(training_files[f], args.output_directory)
+        elif args.analysis == 'prep-idv':
+            prepare_idv_files(training_files[f], args.cross_validation_k, args.output_directory)
         elif args.analysis == 'comb-prob-auc':
             combine_probs_auc(training_files[f], args.original_dir, args.output_directory)
         elif args.analysis == 'convert-names':
@@ -533,11 +546,16 @@ if __name__ == '__main__':
                         metavar='k',
                         default=2,
                         help="indicates the size of the combination for the evaluation functions")
+    parser.add_argument("--required-funcs-base",
+                        type= str,
+                        metavar='required-funcs-base',
+                        default=None,
+                        help="Gets the functions that appear as a base for the new set of combinations")
     parser.add_argument("--required-funcs",
                         type= str,
                         metavar='required-funcs',
                         default=None,
-                        help="Gets the required functions to perform feature selection")
+                        help="Gets the functions that must appear as a part of the current set of combinations")
     parser.add_argument("--column-names",
                         type=str,
                         metavar='colNames',

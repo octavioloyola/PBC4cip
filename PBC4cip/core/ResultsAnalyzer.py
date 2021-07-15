@@ -16,8 +16,9 @@ def show_results(confusion, acc, auc, numPatterns):
     print()
     for i in range(len(confusion[0])):
         for j in range(len(confusion[0])):
-            print(f"{confusion[i][j]} ", end='')
-        print("")
+            pass
+            #print(f"{confusion[i][j]} ", end='')
+        #print("")
     print(f"acc: {acc} , auc: {auc} , numPatterns: {numPatterns}")
 
 def join_prelim_results(fileDir, outputDirectory):
@@ -72,20 +73,29 @@ def order_results(fileDir, output_directory):
         action = "Overwriting"
         os.remove(file_name)
     
-    if str(df.at[0, 'distribution_evaluator']).strip() == 'combiner' or str(df.at[0, 'distribution_evaluator']).strip() == 'combiner-random':
+    if (str(df.at[0, 'distribution_evaluator'].strip()) in ['combiner', 'combiner-random', 'irv']):
         column_names = df.eval_functions.unique()
+        file_names = df.File.unique()
+        print(f"len file: {len(file_names)}")
+        df_output = pd.DataFrame()
+        df_output['File'] = file_names
+        for name in column_names:
+            temp_auc = list(df[df['eval_functions'] == name]['AUC'])
+            df_output[f'{name}-AUC'] = temp_auc
+            temp_acc =list(df[df['eval_functions'] == name]['Acc'])
+            df_output[f'{name}-Acc'] = temp_acc
     else:
+        print(str(df.at[0, 'distribution_evaluator'].strip()))
         column_names = df.distribution_evaluator.unique()
-    
-    file_names = df.File.unique()
-    print(f"len file: {len(file_names)}")
-    df_output = pd.DataFrame()
-    df_output['File'] = file_names
-    for name in column_names:
-        temp_auc = list(df[df['eval_functions'] == name]['AUC'])
-        df_output[f'{name}-AUC'] = temp_auc
-        temp_acc =list(df[df['eval_functions'] == name]['Acc'])
-        df_output[f'{name}-Acc'] = temp_acc
+        file_names = df.File.unique()
+        print(f"len file: {len(file_names)}")
+        df_output = pd.DataFrame()
+        df_output['File'] = file_names
+        for name in column_names:
+            temp_auc = list(df[df['distribution_evaluator'] == name]['AUC'])
+            df_output[f'{name}-AUC'] = temp_auc
+            temp_acc =list(df[df['distribution_evaluator'] == name]['Acc'])
+            df_output[f'{name}-Acc'] = temp_acc
 
     csv_data = df_output.to_csv(file_name, index = False)
 
@@ -772,6 +782,12 @@ def pipeline(fileDir, originalDir, output_directory, k):
     #bayes_auc = multiple_bayesian_multiple(auc_avg_comb, output_directory)
     #analyze_bayes(bayes_auc, output_directory)
     bayes_auc = leo_bayesian(auc_avg, output_directory)
+
+def prepare_idv_files(fileDir, k, output_directory):
+    order_file = order_results(fileDir, output_directory)
+    order_auc, order_acc = separate(order_file, output_directory)
+    auc_sort = sort_results(order_auc, output_directory)
+    auc_avg, acc_avg = average_k_runs_cross_validation(auc_sort, k, output_directory)
 
 def pipeline_leo(fileDir, originalDir, output_directory, k):
     #order_file = order_results(fileDir, output_directory)

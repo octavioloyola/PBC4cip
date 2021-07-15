@@ -9,7 +9,7 @@ PBC4cip is a machine learning classifier package based on contrast patterns used
 
 ## Getting Started
 * You can install PBC4cip as a python package with pip by using [pip install PBC4cip](https://pypi.org/project/PBC4cip/).
-* An example of how to run PBC4cip with csv training and testing files can be found in [PBC4cip/TestProg.py](https://github.com/octavioloyola/PBC4cip/blob/master/PBC4cip/example/example.py)
+* An example of how to run PBC4cip with csv training and testing files can be found in [PBC4cip/example.py](https://github.com/octavioloyola/PBC4cip/blob/master/PBC4cip/example/example.py)
 * This example file can be ran from the PBC4cip directory where you cloned this repository with python -m example.example 
 
 

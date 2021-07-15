@@ -203,9 +203,10 @@ def run_C45_combinations(trainFile, outputDirectory, testFile, resultsId, distri
     else:
         func_combinations = non_filtered_func_combinations
         #func_combinations = [('Chi Squared', 'Bhattacharyya')]
+        #func_combinations = [('Twoing'), ('Quinlan Gain'), ('Gini Impurity'),('Multi Class Hellinger'),('Chi Squared'),('DKM'),('G Statistic'),('Kolmogorov'),('Bhattacharyya')]
         
     for combination in func_combinations:
-        #print(f"combination: {combination}")
+        print(f"combination: {combination}")
         comb_name = "-".join(combination)
         if comb_name not in avoid_funcs:
             if len(required_curr_lst) == 0 or len(required_curr_lst) != 0 and all([x in combination for x in required_curr_lst]):
@@ -394,7 +395,7 @@ def Execute(args):
         elif args.analysis == 'one-bayesian-one':
             one_bayesian_one(training_files[f], args.cross_validation_k, args.output_directory, args.runs)
         elif args.analysis == 'order-results':
-            order_results(training_files[f], args.column_names, args.output_directory)
+            order_results(training_files[f], args.output_directory)
         elif args.analysis == 'average-cv':
             average_k_runs_cross_validation(training_files[f], args.cross_validation_k, args.output_directory)
         elif args.analysis == 'shdz':

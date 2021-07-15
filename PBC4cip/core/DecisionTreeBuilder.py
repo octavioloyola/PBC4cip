@@ -156,7 +156,9 @@ class DecisionTreeBuilder():
                     while splitIterator.FindNext():
                         self.distributionEvaluator.irv(node.Data, splitIterator.CurrentDistribution)
 
+            #print(f"Before enter")
             winning_split_index = self.distributionEvaluator.irv_evaluate()
+            #print(f"After entering")
             idx = 0
             for feature in sampleFeatures:
                 if feature != self.Dataset.Class[0]:

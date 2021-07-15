@@ -33,16 +33,17 @@ class InstantRunoffVoting:
         for index in self.irv_table_rank.index:
             #self.irv_table_rank.loc[index] = self.irv_table_rank.loc[index].rank(ascending=False,method='min', na_option='bottom')
             self.irv_table_rank.loc[index] = self.irv_table_rank.loc[index].rank(ascending=False, method='min', na_option='bottom')
-        #realLen = len(self.irv_table_rank.dropna())
+        one_rows = self.irv_table_rank[self.irv_table_rank==1].count()
+        one_sums = self.irv_table_rank.eq(1).sum()
         
-        while not( (self.irv_table_rank[self.irv_table_rank==1].count()[0] == self.irv_table_rank[self.irv_table_rank == 1].count()).all()) and (
-            not any((self.irv_table_rank.eq(1).sum() > len(self.irv_table_rank.dropna()) // 2))):
+        while not((one_rows[0] == one_rows).all()) and not any(one_sums > len(self.irv_table_rank) // 2):
             #print(f"Pog:\n{self.irv_table_rank[self.irv_table_rank==1].count()[0] == self.irv_table_rank[self.irv_table_rank == 1].count().all()}")
             #print(f"aaaa:\n{not( (self.irv_table_rank[self.irv_table_rank==1].count()[0] == self.irv_table_rank[self.irv_table_rank == 1].count()).all())}")
             #print(f"bbbb:\n{not any((self.irv_table_rank.eq(1).sum() > len(self.irv_table_rank.dropna()) // 2))}")
             #print(f"lenTablee: {len(self.irv_table_rank.columns)}")
             #print(f"table:\n{self.irv_table_vals}")
             #print(f"pre good:\n {self.irv_table_rank}")
+            self.drop_last_place()
             #print(f"len: {len(self.irv_table_rank.columns)}")
 
             #self.irv_table_rank = self.irv_table_vals.copy(deep=True)
@@ -50,12 +51,11 @@ class InstantRunoffVoting:
                 self.irv_table_rank.loc[index] = self.irv_table_vals.loc[index].rank(ascending=False,method='min', na_option='bottom')
                 #self.irv_table_rank.loc[index] = self.irv_table_vals.loc[index].rank(ascending=False, method='min')
             #print(f"good table:\n{self.irv_table_rank}")
-            if len(self.irv_table_rank.columns) == 1:
-                break
-            self.drop_last_place()
+            one_rows = self.irv_table_rank[self.irv_table_rank==1].count()
+            one_sums = self.irv_table_rank.eq(1).sum()
             #print(f"lennDrop_ {len(self.irv_table_rank.columns)}")
         
-        #print(f"about to get best")
+        #print(f"last_table:\n{self.irv_table_rank}")
         best_idx = int ((self.irv_table_rank.eq(1).sum() > len(self.irv_table_rank) // 2).idxmax().replace('CS',''))
         #reset for future cycles    
         self.irv_table_vals = []

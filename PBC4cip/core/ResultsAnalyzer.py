@@ -73,7 +73,7 @@ def order_results(fileDir, output_directory):
         action = "Overwriting"
         os.remove(file_name)
     
-    if (str(df.at[0, 'distribution_evaluator'].strip()) in ['combiner', 'combiner-random', 'irv']):
+    if (str(df.at[0, 'distribution_evaluator'].strip()) in ['combiner', 'combiner-random', 'irv', 'schulze', 'coombs', 'bucklin']):
         column_names = df.eval_functions.unique()
         file_names = df.File.unique()
         print(f"len file: {len(file_names)}")

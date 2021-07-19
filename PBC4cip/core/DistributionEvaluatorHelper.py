@@ -4,6 +4,9 @@ from .DistributionEvaluator import DKM, G_Statistic, MARSH, NormalizedGain, Kolm
 from .EvaluationFunctionCombiner import EvaluationFunctionCombiner
 from .EvaluationFunctionCombinerRandom import EvaluationFunctionCombinerRandom
 from .InstantRunoffVoting import InstantRunoffVoting
+from .SchulzeVoting import SchulzeVoting
+from .CoombsVoting import CoombsVoting
+from .BucklinVoting import BucklinVoting
 def get_distribution_evaluator(eval_func_name):
         evaluator_dict = {
             'twoing': Twoing,
@@ -21,7 +24,10 @@ def get_distribution_evaluator(eval_func_name):
             'bhattacharyya': MultiClassBhattacharyya,
             'combiner': EvaluationFunctionCombiner,
             'combiner random': EvaluationFunctionCombinerRandom,
-            'irv': InstantRunoffVoting
+            'irv': InstantRunoffVoting,
+            'schulze': SchulzeVoting,
+            'coombs': CoombsVoting,
+            'bucklin': BucklinVoting
         }
 
         if eval_func_name.lower().replace('-', ' ') in evaluator_dict:

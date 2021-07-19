@@ -129,15 +129,16 @@ class DecisionTreeBuilder():
                         if currentGain >= self.MinimalSplitGain:
                             winningSplitSelector.EvaluateThis(
                                 currentGain, splitIterator)
-        elif isinstance(self.distributionEvaluator, EvaluationFunctionCombiner):
+
+        else:
             for feature in sampleFeatures:
                 if feature != self.Dataset.Class[0]:
                     splitIterator = self.SplitIteratorProvider.GetSplitIterator(feature)
                     splitIterator.Initialize(instanceTuples)
                     while splitIterator.FindNext():
-                        self.distributionEvaluator.borda_count(node.Data, splitIterator.CurrentDistribution)
+                        self.distributionEvaluator.add_candidate_splits(node.Data, splitIterator.CurrentDistribution)
 
-            winning_split_index = self.distributionEvaluator.borda_count_evaluate()
+            winning_split_index = self.distributionEvaluator.get_best_split_idx()
             idx = 0
             for feature in sampleFeatures:
                 if feature != self.Dataset.Class[0]:
@@ -148,28 +149,6 @@ class DecisionTreeBuilder():
                             winningSplitSelector.List = list(tuple())
                             winningSplitSelector.EvaluateThis(None, splitIterator)
                         idx = idx + 1
-        elif isinstance(self.distributionEvaluator, InstantRunoffVoting):
-            for feature in sampleFeatures:
-                if feature != self.Dataset.Class[0]:
-                    splitIterator = self.SplitIteratorProvider.GetSplitIterator(feature)
-                    splitIterator.Initialize(instanceTuples)
-                    while splitIterator.FindNext():
-                        self.distributionEvaluator.irv(node.Data, splitIterator.CurrentDistribution)
-
-            #print(f"Before enter")
-            winning_split_index = self.distributionEvaluator.irv_evaluate()
-            #print(f"After entering")
-            idx = 0
-            for feature in sampleFeatures:
-                if feature != self.Dataset.Class[0]:
-                    splitIterator = self.SplitIteratorProvider.GetSplitIterator(feature)
-                    splitIterator.Initialize(instanceTuples)
-                    while splitIterator.FindNext():
-                        if idx == winning_split_index:
-                            winningSplitSelector.List = list(tuple())
-                            winningSplitSelector.EvaluateThis(None, splitIterator)
-                        idx = idx + 1
-
                 
         if winningSplitSelector.IsWinner():
             maxSelector = winningSplitSelector.WinningSelector

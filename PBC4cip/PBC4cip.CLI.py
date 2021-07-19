@@ -68,7 +68,7 @@ def run_C45(trainFile, outputDirectory, testFile, resultsId, distribution_evalua
 
     print(f"dt: {dt_builder}")
     
-    if distribution_evaluator in ['combiner','combiner-random', 'irv']:
+    if distribution_evaluator in ['combiner','combiner-random', 'irv', 'schulze']:
         with open(evaluationFunctionDir, "r") as f:
             eval_functions = f.readlines()
             eval_functions = [line.replace("\n", "") for line in eval_functions]
@@ -157,7 +157,7 @@ def run_C45_find_best(trainFile, outputDirectory, testFile, resultsId, eval_func
 
 def run_C45_combinations(trainFile, outputDirectory, testFile, resultsId, distribution_evaluator, evaluationFunctionDir,
  combination_size, required_funcs_base = None, required_funcs = None, comb_to_avoid = None):
-    if not (distribution_evaluator in ['combiner','combiner-random', 'irv']):
+    if not (distribution_evaluator in ['combiner','combiner-random', 'irv', 'schulze', 'coombs', 'bucklin']):
         raise Exception(f"Evaluation measure {distribution_evaluator} not supported for run_C45_combinations")
     with open(evaluationFunctionDir, "r") as f:
         eval_functions = f.readlines()
@@ -202,7 +202,7 @@ def run_C45_combinations(trainFile, outputDirectory, testFile, resultsId, distri
         print(f"len: {len(func_combinations)}")
     else:
         func_combinations = non_filtered_func_combinations
-        #func_combinations = [('Chi Squared', 'Bhattacharyya')]
+        #func_combinations = [('Twoing', 'Bhattacharyya')]
         #func_combinations = [('Twoing'), ('Quinlan Gain'), ('Gini Impurity'),('Multi Class Hellinger'),('Chi Squared'),('DKM'),('G Statistic'),('Kolmogorov'),('Bhattacharyya')]
         
     for combination in func_combinations:

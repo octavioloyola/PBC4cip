@@ -153,14 +153,6 @@ class PandasDataset(Dataset):
         instances_df = X.copy(deep=True)
         instances_df[f'class'] = y['class']
         return instances_df.values
-    """
-    def GetClassValue(self, y_instance):
-        print(f"aaa")
-        print(f"y: {y_instance}")
-        print(f"Class: {self.Class[0]} & y_inst: {y_instance[0]}")
-        print(f"self: {self.GetIndexOfValue(self.Class[0], y_instance[0])}")
-        return self.GetIndexOfValue(self.Class[0], y_instance[0])
-    """
             
 
 class FileDataset(Dataset):

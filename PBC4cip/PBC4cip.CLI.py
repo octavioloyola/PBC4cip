@@ -21,7 +21,7 @@ from core.SupervisedClassifier import DecisionTreeClassifier
 from core.Helpers import ArgMax, convert_to_ndarray, get_col_dist, get_idx_val
 from core.Dataset import Dataset, FileDataset, PandasDataset
 from core.ResultsAnalyzer import show_results, wilcoxon, order_results, separate
-from core.ResultsAnalyzer import prepare_idv_files
+from core.ResultsAnalyzer import prepare_idv_files, replace_rows
 from core.ResultsAnalyzer import one_bayesian_one, multiple_bayesian_multiple
 from core.ResultsAnalyzer import one_bayesian_multiple, average_k_runs_cross_validation
 from core.ResultsAnalyzer import append_results, join_prelim_results,analyze_bayes
@@ -157,7 +157,7 @@ def run_C45_find_best(trainFile, outputDirectory, testFile, resultsId, eval_func
 
 def run_C45_combinations(trainFile, outputDirectory, testFile, resultsId, distribution_evaluator, evaluationFunctionDir,
  combination_size, required_funcs_base = None, required_funcs = None, comb_to_avoid = None):
-    if not (distribution_evaluator in ['combiner','combiner-random', 'irv', 'schulze', 'coombs', 'bucklin']):
+    if not (distribution_evaluator in ['combiner','combiner-random', 'irv', 'schulze', 'coombs', 'bucklin', 'reciprocal', 'stv']):
         raise Exception(f"Evaluation measure {distribution_evaluator} not supported for run_C45_combinations")
     with open(evaluationFunctionDir, "r") as f:
         eval_functions = f.readlines()
@@ -209,6 +209,7 @@ def run_C45_combinations(trainFile, outputDirectory, testFile, resultsId, distri
         print(f"combination: {combination}")
         comb_name = "-".join(combination)
         if comb_name not in avoid_funcs:
+            #print(f"len: {len(required_curr_lst)} and {all([x in combination for x in required_curr_lst])}")
             if len(required_curr_lst) == 0 or len(required_curr_lst) != 0 and all([x in combination for x in required_curr_lst]):
                 dt_builder.distributionEvaluator = dt_builder.distributionEvaluator(list(combination))
                 dt = dt_builder.Build()
@@ -406,6 +407,8 @@ def Execute(args):
             separate(training_files[f], args.output_directory)
         elif args.analysis == 'sort':
             sort_results(training_files[f], args.output_directory)
+        elif args.analysis == 'replace-rows':
+            replace_rows(training_files[f], testing_files[f], args.replacement, args.output_directory)
         elif args.analysis == 'join-prelim':
             join_prelim_results(training_files[f], args.output_directory)
         elif args.analysis == 'prep-idv':
@@ -597,6 +600,11 @@ if __name__ == '__main__':
                         metavar='conv',
                         default=1,
                         help="Sets type of conversion for shortening classifier names")
+    parser.add_argument("--replacement",
+                        type=str,
+                        metavar='replacement',
+                        default='Bhattacharyya',
+                        help="Sets distribution method to be replaced with")
                         
 
     

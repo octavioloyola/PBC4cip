@@ -32,8 +32,10 @@ class InstantRunoffVoting:
             self.irv_table_rank.loc[index] = self.irv_table_rank.loc[index].rank(ascending=False, method='min', na_option='bottom')
         one_rows = self.irv_table_rank[self.irv_table_rank==1].count()
         one_sums = self.irv_table_rank.eq(1).sum()
+        print(f"outside:\n{self.irv_table_vals}\n\n{self.irv_table_rank}")
         
         while not((one_rows[0] == one_rows).all()) and not any(one_sums > len(self.irv_table_rank) // 2):
+            print(self.irv_table_vals)
             self.drop_last_place()
 
             for index in self.irv_table_rank.index:
@@ -41,8 +43,11 @@ class InstantRunoffVoting:
             one_rows = self.irv_table_rank[self.irv_table_rank==1].count()
             one_sums = self.irv_table_rank.eq(1).sum()
         
+        print(self.irv_table_rank) 
         best_idx = int ((self.irv_table_rank.eq(1).sum() > len(self.irv_table_rank) // 2).idxmax().replace('CS',''))
-        #reset for future cycles    
+        print(f"best_idx:{best_idx}")
+        #reset for future cycles
+           
         self.irv_table_vals = []
         self.irv_table_rank = []
         return best_idx

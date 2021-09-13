@@ -57,7 +57,6 @@ def join_prelim_results(fileDir, outputDirectory):
 
 
 def order_results(fileDir, output_directory):
-    #TODO Fix for non combination
     df = pd.read_csv(fileDir)
     output_directory = output_directory + "\\order-results"
 
@@ -73,7 +72,8 @@ def order_results(fileDir, output_directory):
         action = "Overwriting"
         os.remove(file_name)
     
-    if (str(df.at[0, 'distribution_evaluator'].strip()) in ['combiner', 'combiner-random', 'irv', 'schulze', 'coombs', 'bucklin']):
+    if (str(df.at[0, 'distribution_evaluator'].strip()) in ['combiner', 'combiner-random', 'irv', 'schulze', 
+                                                            'coombs', 'bucklin', 'reciprocal', 'stv']):
         column_names = df.eval_functions.unique()
         file_names = df.File.unique()
         print(f"len file: {len(file_names)}")
@@ -221,7 +221,6 @@ def analyze_wilcoxon(fileDir, outputDirectory):
     results_out.close()
 
     return name
-
 
 def one_bayesian_one(fileDir, k, output_directory, runs=1):
     df = pd.read_csv(fileDir)
@@ -772,15 +771,27 @@ def WritePatternsCSV(patterns, originalFile, outputDirectory, suffix=None):
 
     return name
 
+def replace_rows(fileDir, newDir, replacement, output_directory, str_to_replace='Bhattacharyya'):
+    df_comb = pd.read_csv(fileDir)
+    df_comb = df_comb.sort_values('File').reset_index(drop=True)
+    df_replacement = pd.read_csv(newDir)
+    df_replacement = df_replacement.sort_values('File').reset_index(drop=True)
+    df_comb = df_comb[~df_comb['eval_functions'].str.contains(str_to_replace)]
+    df_comb = df_comb.append(df_replacement)
+    df_comb = df_comb.sort_values('File').reset_index(drop=True)
+
+    file_name = os.path.splitext(os.path.basename(fileDir))[0]
+    file_name = os.path.join(output_directory, file_name+'-fixed.csv')
+
+    df_comb.to_csv(file_name, index = False)
+
+
+
+
 def pipeline(fileDir, originalDir, output_directory, k):
-    #joined_file = join_prelim_results(fileDir, output_directory)
     order_file = order_results(fileDir, output_directory)
-    #transpose_file = transpose_results(order_file, column_names, output_directory)
     order_auc, order_acc = separate(order_file, output_directory)
     auc_avg, acc_avg = average_k_runs_cross_validation(order_auc, k, output_directory)
-    #auc_avg_comb = append_results(auc_avg, originalDir, output_directory)     
-    #bayes_auc = multiple_bayesian_multiple(auc_avg_comb, output_directory)
-    #analyze_bayes(bayes_auc, output_directory)
     bayes_auc = leo_bayesian(auc_avg, output_directory)
 
 def prepare_idv_files(fileDir, k, output_directory):
@@ -790,21 +801,12 @@ def prepare_idv_files(fileDir, k, output_directory):
     auc_avg, acc_avg = average_k_runs_cross_validation(auc_sort, k, output_directory)
 
 def pipeline_leo(fileDir, originalDir, output_directory, k):
-    #order_file = order_results(fileDir, output_directory)
-    #order_auc, order_acc = separate(order_file, output_directory)
-    #auc_avg, acc_avg = average_k_runs_cross_validation(order_auc, k, output_directory)
-    #auc_avg_comb = append_results(auc_avg, originalDir, output_directory)
-    #auc_avg_comb = append_results(fileDir, originalDir, output_directory)     
-    #bayes_auc = multiple_bayesian_multiple(auc_avg_comb, output_directory)
-    #analyze_bayes(bayes_auc, output_directory)
-    bayes_auc = leo_bayesian(fileDir, output_directory)
-    shortend_bayes_auc = convert_names(bayes_auc, 1, output_directory)
-    shortened_auc = convert_names(fileDir, 2, output_directory)
+    shortend_bayes_auc = convert_names(fileDir, 1, output_directory)
+    shortened_auc = convert_names(originalDir, 2, output_directory)
     combine_probs_auc(shortend_bayes_auc, shortened_auc, output_directory)
 
 def pipeline_wilcoxon(fileDir, originalDir, output_directory, k):
     order_file = order_results(fileDir, output_directory)
-    #transpose_file = transpose_results(order_file, column_names, output_directory)
     order_auc, order_acc = separate(order_file, output_directory)
     auc_avg, acc_avg = average_k_runs_cross_validation(order_auc, k, output_directory)
     transpose_auc_comb = append_results(auc_avg, originalDir, output_directory)
@@ -814,9 +816,7 @@ def pipeline_wilcoxon(fileDir, originalDir, output_directory, k):
 def pipeline_wilcoxon_cd(fileDir, output_directory):
     #This method begins from criticial difference file
     order_file = order_results(fileDir, output_directory)
-    #transpose_file = transpose_results(order_file, column_names, output_directory)
     order_auc, order_acc = separate(order_file, output_directory)
-    #auc_avg, acc_avg = average_k_runs_cross_validation(order_auc, k, output_directory)
     auc_comb = sort_results(order_auc, output_directory)
     wilcoxon_auc = wilcoxon(auc_comb, output_directory)
     analyze_wilcoxon(wilcoxon_auc, output_directory)
@@ -828,5 +828,4 @@ def pipeline_cd(fileDir, originalDir, output_directory, k):
     auc_comb = append_results(auc_avg, originalDir, output_directory)
     set_for_cd_diagram(auc_comb, output_directory)
 
-def pipeline_med_bayes(probsFile, aucFile, output_directory):
-    pass
+    

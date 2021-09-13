@@ -7,6 +7,8 @@ from .InstantRunoffVoting import InstantRunoffVoting
 from .SchulzeVoting import SchulzeVoting
 from .CoombsVoting import CoombsVoting
 from .BucklinVoting import BucklinVoting
+from .ReciprocalRankVoting import ReciprocalRankVoting
+from .STVVoting import STVVoting
 def get_distribution_evaluator(eval_func_name):
         evaluator_dict = {
             'twoing': Twoing,
@@ -27,7 +29,9 @@ def get_distribution_evaluator(eval_func_name):
             'irv': InstantRunoffVoting,
             'schulze': SchulzeVoting,
             'coombs': CoombsVoting,
-            'bucklin': BucklinVoting
+            'bucklin': BucklinVoting,
+            'reciprocal': ReciprocalRankVoting,
+            'stv': STVVoting
         }
 
         if eval_func_name.lower().replace('-', ' ') in evaluator_dict:

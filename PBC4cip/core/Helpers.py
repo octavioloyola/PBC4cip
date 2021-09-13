@@ -22,6 +22,22 @@ def smallest_idx(source):
             val = value 
     return idx
 
+def smallest_random_idx(source):
+    if len(source) == 0:
+        raise Exception("source must have at least 1 element")
+    val = source[0]
+    idx = 0
+    for i,value in enumerate(source):
+        if value < val:
+            idx = i
+            val = value
+    rnd_lst = []
+    for i,value in enumerate(source):
+        if value == val:
+            rnd_lst.append(i)
+
+    return random.choice(rnd_lst)
+
 def largest_idx(source):
     if len(source) == 0:
         raise Exception("source must have at least 1 element")

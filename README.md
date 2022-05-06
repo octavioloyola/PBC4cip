@@ -18,4 +18,4 @@ This project expands on the code originally made by José René White Enciso, [a
 
 Additional information regarding PBC4cip can be found in its original article:
 
-Loyola-González, O., Medina-Pérez, M. A., Martínez-Trinidad, J. F., Carrasco-Ochoa, J. A., Monroy, R., & García-Borroto, M. (2017). "[PBC4cip: A new contrast pattern-based classifier for class imbalance problems.](https://doi.org/10.1016/j.knosys.2016.10.018)" *Knowledge-Based Systems, 115*, 100-109
+Loyola-González, O., Medina-Pérez, M. A., Martínez-Trinidad, J. F., Carrasco-Ochoa, J. A., Monroy, R., & García-Borroto, M. (2017). "[PBC4cip: A new contrast pattern-based classifier for class imbalance problems.](https://doi.org/10.1016/j.knosys.2016.10.018)" *Knowledge-Based Systems, 115*, 100-109.
